@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using TenisWhatsAppAdmin.Authentication;
-using TenisWhatsAppAdmin.Services;
+using WhatsAppAdmin.Services;
+using WhatsAppAdmin.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +15,7 @@ builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, AuthStateProvider>();
 builder.Services.AddScoped<AuthStateProvider>();
-builder.Services.AddSingleton<ILeagueService, MockLeagueService>();
+builder.Services.AddSingleton<IService, MockService>();
 
 
 var app = builder.Build();

@@ -2,7 +2,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>TenisWhatsAppAdmin</PageTitle>
+<PageTitle>WhatsAppAdmin</PageTitle>
 
 <div class="page">
     <div class="sidebar">
@@ -30,7 +30,7 @@
 @code {
     private async Task Logout()
     {
-        if (AuthStateProvider is TenisWhatsAppAdmin.Authentication.AuthStateProvider Auth)
+        if (AuthStateProvider is WhatsAppAdmin.Authentication.AuthStateProvider Auth)
         {
             await Auth.LogoutAsync();
         }

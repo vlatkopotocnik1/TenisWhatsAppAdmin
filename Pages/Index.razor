@@ -1,41 +1,35 @@
 ﻿@page "/"
-@using TenisWhatsAppAdmin.Models
+@using WhatsAppAdmin.Models
 @inject IJSRuntime JS
 @attribute [Authorize]
 <PageTitle>Index</PageTitle>
 
-@inject TenisWhatsAppAdmin.Services.ILeagueService LeagueService
-<div class="leagues-board">
-    @foreach (var league in _leagues)
+@inject WhatsAppAdmin.Services.IService Service
+<div class="whatsAppGroups-board">
+    @foreach (var whatsAppGroup in _whatsAppGroups)
     {
-        <div class="league-column"
+        <div class="whatsAppGroup-column"
              ondragover="event.preventDefault()"
-             @ondrop="e => OnDrop(e, league.Id)"
+             @ondrop="e => OnDrop(e, whatsAppGroup.Id)"
              @ondragover:preventDefault>
 
-            <div class="league-header" data-color="@GetLeagueColor(league.Name)">
-                @league.Name
+            <div class="whatsAppGroup-header" data-color="@GetWhatsAppGroupColor(whatsAppGroup.Name)">
+                @whatsAppGroup.Name
             </div>
 
-            <div class="league-body">
-                <div class="league-grid league-grid-header">
-                    <div>Player</div>
-                    <div>Played</div>
-                    <div>Won</div>
-                    <div>Lost</div>
+            <div class="whatsAppGroup-body">
+                <div class="whatsAppGroup-grid whatsAppGroup-grid-header">
+                    <div>User</div>
                     <div>For</div>
                 </div>
 
-                @foreach (var player in league.Players)
+                @foreach (var user in whatsAppGroup.Users)
                 {
-                    <div class="league-grid player-row"
+                    <div class="whatsAppGroup-grid user-row"
                          draggable="true"
-                         @ondragstart="e => OnDragStart(e, player.Id, league.Id)">
-                        <div>@player.Name</div>
-                        <div>@player.Played</div>
-                        <div>@player.Won</div>
-                        <div>@player.Lost</div>
-                        <div>@player.Rating</div>
+                         @ondragstart="e => OnDragStart(e, user.Id, whatsAppGroup.Id)">
+                        <div>@user.Name</div>
+                        <div>@user.Rating</div>
                     </div>
                 }
             </div>
@@ -54,24 +48,24 @@
 </script>
 
 @code {
-    private List<League> _leagues = new();
+    private List<WhatsAppGroup> _whatsAppGroups = new();
     private bool _loading = true;
 
     // temp drag info
-    private Guid _draggingPlayerId;
-    private string? _dragFromLeagueId;
+    private Guid _draggingUserId;
+    private string? _dragFromWhatsAppGroupId;
 
     protected override async Task OnInitializedAsync()
     {
-        _leagues = await LeagueService.GetLeaguesAsync();
+        _whatsAppGroups = await Service.GetWhatsAppGroupsAsync();
         _loading = false;
     }
 
-    private void OnDragStart(DragEventArgs e, Guid playerId, string fromLeagueId)
+    private void OnDragStart(DragEventArgs e, Guid userId, string fromWhatsAppGroupId)
     {
         // store the drag info server-side (no call to DataTransfer.SetData)
-        _draggingPlayerId = playerId;
-        _dragFromLeagueId = fromLeagueId;
+        _draggingUserId = userId;
+        _dragFromWhatsAppGroupId = fromWhatsAppGroupId;
 
         // optionally set the allowed effect, this doesn't call setData:
         if (e.DataTransfer != null)
@@ -81,25 +75,25 @@
         // No DataTransfer.SetData call here — that caused the exception.
     }
 
-    private async Task OnDrop(DragEventArgs e, string toLeagueId)
+    private async Task OnDrop(DragEventArgs e, string toWhatsAppGroupId)
     {
-        if (_draggingPlayerId == Guid.Empty || string.IsNullOrEmpty(_dragFromLeagueId)) return;
-        if (_dragFromLeagueId == toLeagueId) return; // no-op
+        if (_draggingUserId == Guid.Empty || string.IsNullOrEmpty(_dragFromWhatsAppGroupId)) return;
+        if (_dragFromWhatsAppGroupId == toWhatsAppGroupId) return; // no-op
 
         _loading = true;
         StateHasChanged();
 
         // call service to move
-        _leagues = await LeagueService.MovePlayerAsync(_draggingPlayerId, _dragFromLeagueId, toLeagueId);
+        _whatsAppGroups = await Service.MoveUserAsync(_draggingUserId, _dragFromWhatsAppGroupId, toWhatsAppGroupId);
 
         // reset
-        _draggingPlayerId = Guid.Empty;
-        _dragFromLeagueId = null;
+        _draggingUserId = Guid.Empty;
+        _dragFromWhatsAppGroupId = null;
         _loading = false;
         StateHasChanged();
     }
 
-    private string GetLeagueColor(string name) => name switch
+    private string GetWhatsAppGroupColor(string name) => name switch
     {
         var n when n.Contains("1") => "blue",
         var n when n.Contains("2") => "red",

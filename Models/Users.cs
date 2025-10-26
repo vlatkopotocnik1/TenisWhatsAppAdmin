@@ -1,13 +1,11 @@
-﻿namespace TenisWhatsAppAdmin.Models
+﻿namespace WhatsAppAdmin.Models
 {
-    public class Player
+    public class Users
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
         public int Rating { get; set; }
         public string Notes { get; set; } = string.Empty;
-        public int Played { get; set; }
-        public int Won { get; set; }
-        public int Lost { get; set; }
+        public string PhoneNumber { get; set; } // E.164 format
     }
 }

@@ -1,13 +1,13 @@
-﻿@using TenisWhatsAppAdmin.Authentication
+﻿@using WhatsAppAdmin.Authentication
 @using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
-@inject TenisWhatsAppAdmin.Authentication.AuthStateProvider AuthStateProvider
+@inject WhatsAppAdmin.Authentication.AuthStateProvider AuthStateProvider
 
 <AuthorizeView>
     <Authorized>
         <div class="top-row ps-3 navbar navbar-dark">
             <div class="container-fluid">
-                <a class="navbar-brand" href="/">TenisWhatsAppAdmin</a>
+                <a class="navbar-brand" href="/">WhatsAppAdmin</a>
                 <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
                     <span class="navbar-toggler-icon"></span>
                 </button>

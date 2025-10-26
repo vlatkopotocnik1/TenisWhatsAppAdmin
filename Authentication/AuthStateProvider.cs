@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
-namespace TenisWhatsAppAdmin.Authentication
+namespace WhatsAppAdmin.Authentication
 {
     public class AuthStateProvider : AuthenticationStateProvider
     {
