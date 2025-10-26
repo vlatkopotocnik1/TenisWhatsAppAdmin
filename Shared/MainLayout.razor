@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>TenisWhatsAppAdmin</PageTitle>
 
@@ -9,7 +11,14 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+            <AuthorizeView>
+                <Authorized>
+                    <a href="" @onclick="Logout">Logout</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/login">Login</a>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -17,3 +26,15 @@
         </article>
     </main>
 </div>
+
+@code {
+    private async Task Logout()
+    {
+        if (AuthStateProvider is TenisWhatsAppAdmin.Authentication.AuthStateProvider Auth)
+        {
+            await Auth.LogoutAsync();
+        }
+
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

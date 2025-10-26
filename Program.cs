@@ -1,13 +1,20 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using TenisWhatsAppAdmin.Data;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using TenisWhatsAppAdmin.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
+
+// ProtectedSessionStorage (to persist login across refresh within the browser session)
+builder.Services.AddScoped<ProtectedSessionStorage>();
+// Authorization + custom AuthenticationStateProvider
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, AuthStateProvider>();
+builder.Services.AddScoped<AuthStateProvider>();
+
 
 var app = builder.Build();
 

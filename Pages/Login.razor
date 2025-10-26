@@ -1,0 +1,108 @@
+﻿@page "/login"
+@inject NavigationManager Navigation
+@inject TenisWhatsAppAdmin.Authentication.AuthStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Components.Forms
+
+<h3>Admin sign-in</h3>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<EditForm Model="_model" OnValidSubmit="Submit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Username</label>
+        <InputText @bind-Value="_model.Username" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Password</label>
+        <InputText @bind-Value="_model.Password" type="password" class="form-control" />
+    </div>
+
+    <button class="btn btn-primary" type="submit" disabled="@_processing">
+        @if (_processing)
+        {
+            <span>Signing in…</span>
+        }
+        else
+        {
+            <span>Login</span>
+        }
+    </button>
+</EditForm>
+
+@code {
+    private LoginModel _model = new();
+    private string? _error;
+    private bool _processing;
+
+    private async Task Submit()
+    {
+        _error = null;
+        _processing = true;
+
+        try
+        {
+            // Attempt login
+            var ok = await AuthStateProvider.LoginAsync(
+                _model.Username?.Trim() ?? string.Empty,
+                _model.Password ?? string.Empty
+            );
+
+            if (!ok)
+            {
+                _error = "Invalid username or password.";
+                return;
+            }
+
+            // Wait for the provider to report the new auth state.
+            // Poll briefly — this avoids a race where Router reads the old state.
+            // We will check the AuthenticationState up to ~1 second total (small, safe).
+            var authenticated = false;
+            for (var i = 0; i < 20; i++) // 20 * 50ms = 1s max
+            {
+                var state = await AuthStateProvider.GetAuthenticationStateAsync();
+                if (state.User?.Identity?.IsAuthenticated == true)
+                {
+                    authenticated = true;
+                    break;
+                }
+
+                // short pause to give the provider time to update
+                await Task.Delay(50);
+            }
+
+            if (authenticated)
+            {
+                // navigate to home (or returnUrl if you implement it)
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                // This is unlikely but possible if something blocked NotifyAuthenticationStateChanged
+                _error = "Sign in succeeded but authentication state hasn't updated. Try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "An error occurred while signing in.";
+            Console.Error.WriteLine(ex);
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    public class LoginModel
+    {
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+    }
+}
