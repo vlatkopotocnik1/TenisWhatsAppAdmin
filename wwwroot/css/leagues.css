@@ -1,0 +1,95 @@
+﻿/* Layout container */
+.leagues-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 24px;
+    padding: 20px;
+}
+
+/* Each league box */
+.league-column {
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* League header (colored bar) */
+.league-header {
+    color: #fff;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 10px;
+    font-size: 1rem;
+    border-bottom: 3px solid rgba(0,0,0,0.1);
+}
+
+    .league-header[data-color="blue"] {
+        background: linear-gradient(to right, #007bff, #0056b3);
+    }
+
+    .league-header[data-color="red"] {
+        background: linear-gradient(to right, #ff4b4b, #b30000);
+    }
+
+    .league-header[data-color="purple"] {
+        background: linear-gradient(to right, #9b59b6, #6f42c1);
+    }
+
+    .league-header[data-color="orange"] {
+        background: linear-gradient(to right, #ff9f43, #e67e22);
+    }
+
+/* Grid rows (header + player rows) */
+.league-grid {
+    display: grid;
+    grid-template-columns: 1fr 60px 60px 60px 60px;
+    text-align: center;
+    align-items: center;
+}
+
+/* Header row styling */
+.league-grid-header {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+/* Player rows */
+.player-row {
+    border-bottom: 1px solid #e0e0e0;
+    padding: 6px 4px;
+    cursor: grab;
+    transition: background 0.15s ease;
+}
+
+    .player-row:hover {
+        background-color: #f9f9f9;
+    }
+
+    .player-row:active {
+        cursor: grabbing;
+    }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .leagues-board {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 10px;
+    }
+
+    .league-grid {
+        grid-template-columns: 1fr 50px 50px 50px 50px;
+        font-size: 0.9rem;
+    }
+
+    .league-header {
+        font-size: 0.95rem;
+        padding: 8px;
+    }
+}
