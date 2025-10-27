@@ -1,52 +1,57 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 
 namespace WhatsAppAdmin.Services
 {
     public class WhapiService
     {
         private readonly HttpClient _httpClient;
-        private readonly string _apiKey;
+        private  static readonly string _apiKey = "KTfBVmbnACOqJtO0wS0zkzpl8lHIjYED"; // replace with your sandbox key
 
         public WhapiService(HttpClient httpClient)
         {
             _httpClient = httpClient;
-            _apiKey = "KTfBVmbnACOqJtO0wS0zkzpl8lHIjYED"; // replace with your sandbox key
         }
 
-        public async Task<string?> CreateGroupAsync(string groupName, IEnumerable<string> phoneNumbers)
+        public static async Task<string> CreateGroupAsync(string groupName, IEnumerable<string> participants)
         {
-            var url = "https://gate.whapi.cloud/groups";
+            using var client = new HttpClient();
+            client.BaseAddress = new Uri("https://gate.whapi.cloud");
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
 
             var payload = new
             {
                 subject = groupName,
-                participants = phoneNumbers
-                    .Select(p => p.Replace("+", "").Trim()) // just digits, no domain
-                    .ToList()
+                participants = participants.Select(p => p.Replace("+", "")).ToList()
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Add("Authorization", $"Bearer {_apiKey}");
-            request.Content = JsonContent.Create(payload);
+            var response = await client.PostAsJsonAsync("/groups", payload);
+            var json = await response.Content.ReadAsStringAsync();
 
-            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+                throw new Exception($"Failed to create group: {json}");
 
-            var result = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"Response: {result}");
+            using var doc = JsonDocument.Parse(json);
+            var id = doc.RootElement.GetProperty("id").GetString();
+
+            return id ?? string.Empty;
+        }
+
+
+        public static async Task DeleteGroupAsync(string groupId)
+        {
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+            client.BaseAddress = new Uri("https://gate.whapi.cloud");
+
+            var response = await client.DeleteAsync($"/groups/{groupId}");
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"Whapi error: {response.StatusCode}\n{result}");
+                var content = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Failed to delete group ({response.StatusCode}): {content}");
             }
-
-            using var doc = JsonDocument.Parse(result);
-            if (doc.RootElement.TryGetProperty("id", out var idElement))
-            {
-                return idElement.GetString();
-            }
-
-            return null;
         }
     }
 }

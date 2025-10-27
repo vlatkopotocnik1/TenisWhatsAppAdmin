@@ -53,9 +53,19 @@ else
 		<button class="btn-import btn-import-green"
 				@onclick="CreateGroupsOnWhatsApp"
 				disabled="@_isCreating">
-			<span class="btn-icon">🔁</span>
+			<span class="btn-icon">👥</span>
 			@(_isCreating ? "Creating Groups…" : "Create WhatsApp Groups")
 		</button>
+		<button class="btn-import btn-import-red"
+				@onclick="DeleteAllGroupsFromWhatsApp"
+				disabled="@_isDeleting">
+			<span class="btn-icon">🗑️</span>
+			@(_isDeleting ? "Deleting Groups…" : "Delete All WhatsApp Groups")
+		</button>
+		@if (!string.IsNullOrEmpty(_statusMessage))
+		{
+			<div class="import-status">@_statusMessage</div>
+		}
 	}
 }
 
@@ -63,6 +73,8 @@ else
 	private List<WhatsAppGroup> _whatsAppGroups = new();
 	private bool _loading = true;
 	private bool _isCreating = false;
+	private string? _statusMessage;
+	private bool _isDeleting = false;
 
 	// Drag tracking
 	private Guid _draggingUserId;
@@ -189,33 +201,99 @@ else
 	private async Task CreateGroupsOnWhatsApp()
 	{
 		_isCreating = true;
+		_statusMessage = "Starting WhatsApp group creation…";
 		StateHasChanged();
+
 		try
 		{
+			int total = _whatsAppGroups.Count;
+			int current = 0;
+
 			foreach (var group in _whatsAppGroups)
 			{
-				var phoneNumbers = group.Users
-					.Where(u => !string.IsNullOrWhiteSpace(u.PhoneNumber))
+				current++;
+				_statusMessage = $"Creating group {current}/{total}: {group.Name}";
+				StateHasChanged();
+
+				var phones = group.Users
 					.Select(u => u.PhoneNumber)
+					.Where(p => !string.IsNullOrWhiteSpace(p))
 					.ToList();
 
-				if (phoneNumbers.Count == 0)
+				if (phones.Count == 0)
+				{
+					_statusMessage += $"\n⚠️ Skipped {group.Name} (no valid numbers)";
 					continue;
+				}
 
-				var groupId = await WhapiService.CreateGroupAsync(group.Name, phoneNumbers);
-				Console.WriteLine($"Created group '{group.Name}' with ID: {groupId}");
+				try
+				{
+					var createdId = await WhapiService.CreateGroupAsync(group.Name, phones);
+					group.Id = createdId;
+					_statusMessage += $"\n✅ Created '{group.Name}' → {createdId}";
+				}
+				catch (Exception ex)
+				{
+					_statusMessage += $"\n❌ Failed '{group.Name}': {ex.Message}";
+				}
+
+				// short delay for readability / API pacing
+				await Task.Delay(500);
 			}
 
-			await JS.InvokeVoidAsync("alert", "All WhatsApp groups created successfully!");
+			_statusMessage += "\nAll groups processed.";
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"Error creating groups: {ex.Message}");
-			await JS.InvokeVoidAsync("alert", $"Error creating groups: {ex.Message}");
+			_statusMessage = $"❌ Fatal error: {ex.Message}";
 		}
 		finally
 		{
 			_isCreating = false;
+			StateHasChanged();
+		}
+	}
+
+	private async Task DeleteAllGroupsFromWhatsApp()
+	{
+		_isDeleting = true;
+		_statusMessage = "Deleting all WhatsApp groups…";
+		StateHasChanged();
+
+		try
+		{
+			int total = _whatsAppGroups.Count;
+			int current = 0;
+
+			foreach (var group in _whatsAppGroups)
+			{
+				current++;
+				_statusMessage = $"Deleting group {current}/{total}: {group.Name}";
+				StateHasChanged();
+
+				try
+				{
+					// Replace this with your Whapi helper (same one you used for Create)
+					await WhapiService.DeleteGroupAsync(group.Id);
+					_statusMessage += $"\n✅ Deleted '{group.Name}'";
+				}
+				catch (Exception ex)
+				{
+					_statusMessage += $"\n❌ Failed to delete '{group.Name}': {ex.Message}";
+				}
+
+				await Task.Delay(300); // slight delay to avoid hitting rate limits
+			}
+
+			_statusMessage += "\nAll groups processed.";
+		}
+		catch (Exception ex)
+		{
+			_statusMessage = $"❌ Fatal error: {ex.Message}";
+		}
+		finally
+		{
+			_isDeleting = false;
 			StateHasChanged();
 		}
 	}
