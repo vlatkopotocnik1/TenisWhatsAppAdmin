@@ -274,7 +274,7 @@ else
 				try
 				{
 					// Replace this with your Whapi helper (same one you used for Create)
-					await WhapiService.DeleteGroupAsync(group.Id);
+					await WhapiService.DeleteGroupFullyAsync(group.Id);
 					_statusMessage += $"\n✅ Deleted '{group.Name}'";
 				}
 				catch (Exception ex)
