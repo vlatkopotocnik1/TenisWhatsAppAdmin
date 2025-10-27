@@ -17,6 +17,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, AuthStateProvider>();
 builder.Services.AddScoped<AuthStateProvider>();
 builder.Services.AddSingleton<IService, MockService>();
 builder.Services.AddSingleton<ImportStateService>();
+builder.Services.AddHttpClient<WhapiService>();
 
 
 var app = builder.Build();

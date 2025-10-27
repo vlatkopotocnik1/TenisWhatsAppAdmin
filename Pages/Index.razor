@@ -4,6 +4,7 @@
 @inject ImportStateService ImportState
 @inject IService Service
 @inject IJSRuntime JS
+@inject WhatsAppAdmin.Services.WhapiService WhapiService
 @attribute [Authorize]
 <PageTitle>Index</PageTitle>
 
@@ -11,195 +12,240 @@
 
 @if (_loading)
 {
-    <div style="padding:20px;">Loading…</div>
+	<div style="padding:20px;">Loading…</div>
 }
 else
 {
-    <div class="whatsAppGroups-board">
-        @foreach (var whatsAppGroup in _whatsAppGroups)
-        {
-            <div class="whatsAppGroup-column"
-                 @ondrop="e => OnDrop(e, whatsAppGroup.Id)"
-                 @ondragover:preventDefault>
+	<div class="whatsAppGroups-board">
+		@foreach (var whatsAppGroup in _whatsAppGroups)
+		{
+			<div class="whatsAppGroup-column"
+				 @ondrop="e => OnDrop(e, whatsAppGroup.Id)"
+				 @ondragover:preventDefault>
 
-                <div class="whatsAppGroup-header" data-color="@GetWhatsAppGroupColor(whatsAppGroup.Name)">
-                    @whatsAppGroup.Name
-                </div>
+				<div class="whatsAppGroup-header" data-color="@GetWhatsAppGroupColor(whatsAppGroup.Name)">
+					@whatsAppGroup.Name
+				</div>
 
-                <div class="whatsAppGroup-body">
+				<div class="whatsAppGroup-body">
 
-                    @foreach (var user in whatsAppGroup.Users)
-                    {
-                        <div class="whatsAppGroup-grid user-row"
-                             draggable="true"
-                             tabindex="0"
-                             @ondragstart="e => OnDragStart(e, user.Id, whatsAppGroup.Id)">
-                            <div class="user-main" style="text-align:center; padding:8px; white-space: nowrap;">
-                                @user.Name
-                            </div>
-                            <div class="user-details" role="region" aria-label="@($"{user.Name} details")">
-                                <div><strong>Phone:</strong> @user.PhoneNumber</div>
-                                <div><strong>Notes:</strong> @user.Notes</div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-    </div>
+					@foreach (var user in whatsAppGroup.Users)
+					{
+						<div class="whatsAppGroup-grid user-row"
+							 draggable="true"
+							 tabindex="0"
+							 @ondragstart="e => OnDragStart(e, user.Id, whatsAppGroup.Id)">
+							<div class="user-main" style="text-align:center; padding:8px; white-space: nowrap;">
+								@user.Name
+							</div>
+							<div class="user-details" role="region" aria-label="@($"{user.Name} details")">
+								<div><strong>Phone:</strong> @user.PhoneNumber</div>
+								<div><strong>Notes:</strong> @user.Notes</div>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+		}
+	</div>
+	@if (_whatsAppGroups.Count != 0)
+	{
+		<button class="btn-import btn-import-green"
+				@onclick="CreateGroupsOnWhatsApp"
+				disabled="@_isCreating">
+			<span class="btn-icon">🔁</span>
+			@(_isCreating ? "Creating Groups…" : "Create WhatsApp Groups")
+		</button>
+	}
 }
 
 @code {
-    private List<WhatsAppGroup> _whatsAppGroups = new();
-    private bool _loading = true;
+	private List<WhatsAppGroup> _whatsAppGroups = new();
+	private bool _loading = true;
+	private bool _isCreating = false;
 
-    // Drag tracking
-    private Guid _draggingUserId;
-    private string? _dragFromWhatsAppGroupId;
+	// Drag tracking
+	private Guid _draggingUserId;
+	private string? _dragFromWhatsAppGroupId;
 
-    protected override async Task OnInitializedAsync()
-    {
-        ImportState.OnChange += ImportState_OnChange;
+	protected override async Task OnInitializedAsync()
+	{
+		ImportState.OnChange += ImportState_OnChange;
 
-        if (ImportState.HasGroups)
-        {
-            _whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
-        }
+		if (ImportState.HasGroups)
+		{
+			_whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
+		}
 
-        _loading = false;
-    }
+		_loading = false;
+	}
 
-    private async Task<List<WhatsAppGroup>?> SafeGetServiceGroupsAsync()
-    {
-        try
-        {
-            if (Service != null)
-            {
-                return await Service.GetWhatsAppGroupsAsync();
-            }
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
+	private async Task<List<WhatsAppGroup>?> SafeGetServiceGroupsAsync()
+	{
+		try
+		{
+			if (Service != null)
+			{
+				return await Service.GetWhatsAppGroupsAsync();
+			}
+			return null;
+		}
+		catch
+		{
+			return null;
+		}
+	}
 
-    private void ImportState_OnChange()
-    {
-        InvokeAsync(async () =>
-        {
-            if (ImportState.HasGroups)
-            {
-                _whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
-            }
-            else
-            {
-                await ReloadFromService();
-            }
-            StateHasChanged();
-        });
-    }
+	private void ImportState_OnChange()
+	{
+		InvokeAsync(async () =>
+		{
+			if (ImportState.HasGroups)
+			{
+				_whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
+			}
+			else
+			{
+				await ReloadFromService();
+			}
+			StateHasChanged();
+		});
+	}
 
-    private async Task ReloadFromService()
-    {
-        _loading = true;
-        StateHasChanged();
+	private async Task ReloadFromService()
+	{
+		_loading = true;
+		StateHasChanged();
 
-        _whatsAppGroups = (await SafeGetServiceGroupsAsync()) ?? new List<WhatsAppGroup>();
+		_whatsAppGroups = (await SafeGetServiceGroupsAsync()) ?? new List<WhatsAppGroup>();
 
-        _loading = false;
-        StateHasChanged();
-    }
+		_loading = false;
+		StateHasChanged();
+	}
 
-    private List<WhatsAppGroup> ConvertImportedToWhatsAppGroups(IEnumerable<WhatsAppGroup> imported)
-    {
-        var outList = new List<WhatsAppGroup>();
-        foreach (var ig in imported)
-        {
-            var wg = new WhatsAppGroup
-            {
-                Id = ig.Id ?? Guid.NewGuid().ToString(),
-                Name = ig.Name ?? string.Empty,
-                Users = ig.Users.Select(u => new Users
-                {
-                    Id = u.Id == Guid.Empty ? Guid.NewGuid() : u.Id,
-                    Name = u.Name ?? string.Empty,
-                    Rating = 0,
-                    Notes = string.Empty,
-                    PhoneNumber = u.PhoneNumber ?? string.Empty
-                }).ToList()
-            };
-            outList.Add(wg);
-        }
-        return outList;
-    }
+	private void OnDragStart(DragEventArgs e, Guid userId, string fromWhatsAppGroupId)
+	{
+		_draggingUserId = userId;
+		_dragFromWhatsAppGroupId = fromWhatsAppGroupId;
 
-    private void OnDragStart(DragEventArgs e, Guid userId, string fromWhatsAppGroupId)
-    {
-        _draggingUserId = userId;
-        _dragFromWhatsAppGroupId = fromWhatsAppGroupId;
+		if (e.DataTransfer != null)
+		{
+			e.DataTransfer.DropEffect = "move";
+		}
 
-        if (e.DataTransfer != null)
-        {
-            e.DataTransfer.DropEffect = "move";
-        }
+		Console.WriteLine($"DragStart: {userId} from {fromWhatsAppGroupId}");
+	}
 
-        Console.WriteLine($"DragStart: {userId} from {fromWhatsAppGroupId}");
-    }
+	private async Task OnDrop(DragEventArgs e, string toWhatsAppGroupId)
+	{
+		if (_draggingUserId == Guid.Empty || string.IsNullOrEmpty(_dragFromWhatsAppGroupId)) return;
+		if (_dragFromWhatsAppGroupId == toWhatsAppGroupId) return;
 
-    private async Task OnDrop(DragEventArgs e, string toWhatsAppGroupId)
-    {
-        if (_draggingUserId == Guid.Empty || string.IsNullOrEmpty(_dragFromWhatsAppGroupId)) return;
-        if (_dragFromWhatsAppGroupId == toWhatsAppGroupId) return;
+		_loading = true;
+		StateHasChanged();
 
-        _loading = true;
-        StateHasChanged();
+		var fromGroup = _whatsAppGroups.FirstOrDefault(g => g.Id == _dragFromWhatsAppGroupId);
+		var toGroup = _whatsAppGroups.FirstOrDefault(g => g.Id == toWhatsAppGroupId);
 
-        var fromGroup = _whatsAppGroups.FirstOrDefault(g => g.Id == _dragFromWhatsAppGroupId);
-        var toGroup = _whatsAppGroups.FirstOrDefault(g => g.Id == toWhatsAppGroupId);
+		if (fromGroup != null && toGroup != null)
+		{
+			var user = fromGroup.Users.FirstOrDefault(u => u.Id == _draggingUserId);
+			if (user != null)
+			{
+				fromGroup.Users.Remove(user);
+				toGroup.Users.Add(user);
 
-        if (fromGroup != null && toGroup != null)
-        {
-            var user = fromGroup.Users.FirstOrDefault(u => u.Id == _draggingUserId);
-            if (user != null)
-            {
-                fromGroup.Users.Remove(user);
-                toGroup.Users.Add(user);
+				// Optional service call
+				try
+				{
+					var mi = Service?.GetType().GetMethod("MoveUserAsync");
+					if (mi != null)
+					{
+						var task = (Task<List<WhatsAppGroup>>)mi.Invoke(Service, new object[] { user.Id, _dragFromWhatsAppGroupId, toWhatsAppGroupId })!;
+						_whatsAppGroups = await task;
+					}
+				}
+				catch { /* ignore */ }
+			}
+		}
 
-                // Optional service call
-                try
-                {
-                    var mi = Service?.GetType().GetMethod("MoveUserAsync");
-                    if (mi != null)
-                    {
-                        var task = (Task<List<WhatsAppGroup>>)mi.Invoke(Service, new object[] { user.Id, _dragFromWhatsAppGroupId, toWhatsAppGroupId })!;
-                        _whatsAppGroups = await task;
-                    }
-                }
-                catch { /* ignore */ }
-            }
-        }
+		_draggingUserId = Guid.Empty;
+		_dragFromWhatsAppGroupId = null;
 
-        _draggingUserId = Guid.Empty;
-        _dragFromWhatsAppGroupId = null;
+		_loading = false;
+		StateHasChanged();
+	}
 
-        _loading = false;
-        StateHasChanged();
-    }
+	private string GetWhatsAppGroupColor(string name)
+	{
+		if (string.IsNullOrEmpty(name)) return "orange";
+		name = name.ToLowerInvariant();
+		if (name.Contains("1")) return "blue";
+		if (name.Contains("2")) return "red";
+		if (name.Contains("3")) return "purple";
+		return "orange";
+	}
 
-    private string GetWhatsAppGroupColor(string name)
-    {
-        if (string.IsNullOrEmpty(name)) return "orange";
-        name = name.ToLowerInvariant();
-        if (name.Contains("1")) return "blue";
-        if (name.Contains("2")) return "red";
-        if (name.Contains("3")) return "purple";
-        return "orange";
-    }
+	private async Task CreateGroupsOnWhatsApp()
+	{
+		_isCreating = true;
+		StateHasChanged();
+		try
+		{
+			foreach (var group in _whatsAppGroups)
+			{
+				var phoneNumbers = group.Users
+					.Where(u => !string.IsNullOrWhiteSpace(u.PhoneNumber))
+					.Select(u => u.PhoneNumber)
+					.ToList();
 
-    public void Dispose()
-    {
-        ImportState.OnChange -= ImportState_OnChange;
-    }
+				if (phoneNumbers.Count == 0)
+					continue;
+
+				var groupId = await WhapiService.CreateGroupAsync(group.Name, phoneNumbers);
+				Console.WriteLine($"Created group '{group.Name}' with ID: {groupId}");
+			}
+
+			await JS.InvokeVoidAsync("alert", "All WhatsApp groups created successfully!");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error creating groups: {ex.Message}");
+			await JS.InvokeVoidAsync("alert", $"Error creating groups: {ex.Message}");
+		}
+		finally
+		{
+			_isCreating = false;
+			StateHasChanged();
+		}
+	}
+
+
+	public void Dispose()
+	{
+		ImportState.OnChange -= ImportState_OnChange;
+	}
+
+	private List<WhatsAppGroup> ConvertImportedToWhatsAppGroups(IEnumerable<WhatsAppGroup> imported)
+	{
+		var outList = new List<WhatsAppGroup>();
+		foreach (var ig in imported)
+		{
+			var wg = new WhatsAppGroup
+			{
+				Id = ig.Id ?? Guid.NewGuid().ToString(),
+				Name = ig.Name ?? string.Empty,
+				Users = ig.Users.Select(u => new Users
+				{
+					Id = u.Id == Guid.Empty ? Guid.NewGuid() : u.Id,
+					Name = u.Name ?? string.Empty,
+					Rating = 0,
+					Notes = string.Empty,
+					PhoneNumber = u.PhoneNumber ?? string.Empty
+				}).ToList()
+			};
+			outList.Add(wg);
+		}
+		return outList;
+	}
 }
