@@ -1,104 +1,205 @@
 ﻿@page "/"
 @using WhatsAppAdmin.Models
+@using WhatsAppAdmin.Services
+@inject ImportStateService ImportState
+@inject IService Service
 @inject IJSRuntime JS
 @attribute [Authorize]
 <PageTitle>Index</PageTitle>
 
-@inject WhatsAppAdmin.Services.IService Service
-<div class="whatsAppGroups-board">
-    @foreach (var whatsAppGroup in _whatsAppGroups)
-    {
-        <div class="whatsAppGroup-column"
-             ondragover="event.preventDefault()"
-             @ondrop="e => OnDrop(e, whatsAppGroup.Id)"
-             @ondragover:preventDefault>
+<ImportToolbar />
 
-            <div class="whatsAppGroup-header" data-color="@GetWhatsAppGroupColor(whatsAppGroup.Name)">
-                @whatsAppGroup.Name
-            </div>
+@if (_loading)
+{
+    <div style="padding:20px;">Loading…</div>
+}
+else
+{
+    <div class="whatsAppGroups-board">
+        @foreach (var whatsAppGroup in _whatsAppGroups)
+        {
+            <div class="whatsAppGroup-column"
+                 @ondrop="e => OnDrop(e, whatsAppGroup.Id)"
+                 @ondragover:preventDefault>
 
-            <div class="whatsAppGroup-body">
-                <div class="whatsAppGroup-grid whatsAppGroup-grid-header">
-                    <div>User</div>
-                    <div>For</div>
+                <div class="whatsAppGroup-header" data-color="@GetWhatsAppGroupColor(whatsAppGroup.Name)">
+                    @whatsAppGroup.Name
                 </div>
 
-                @foreach (var user in whatsAppGroup.Users)
-                {
-                    <div class="whatsAppGroup-grid user-row"
-                         draggable="true"
-                         @ondragstart="e => OnDragStart(e, user.Id, whatsAppGroup.Id)">
-                        <div>@user.Name</div>
-                        <div>@user.Rating</div>
-                    </div>
-                }
+                <div class="whatsAppGroup-body">
+
+                    @foreach (var user in whatsAppGroup.Users)
+                    {
+                        <div class="whatsAppGroup-grid user-row"
+                             draggable="true"
+                             tabindex="0"
+                             @ondragstart="e => OnDragStart(e, user.Id, whatsAppGroup.Id)">
+                            <div class="user-main" style="text-align:center; padding:8px; white-space: nowrap;">
+                                @user.Name
+                            </div>
+                            <div class="user-details" role="region" aria-label="@($"{user.Name} details")">
+                                <div><strong>Phone:</strong> @user.PhoneNumber</div>
+                                <div><strong>Notes:</strong> @user.Notes</div>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
-        </div>
-    }
-</div>
-
-
-
-<script>
-	window.dragHelper = {
-		setDragData: function (e, data) {
-			e.dataTransfer.setData("text/plain", data);
-		}
-	};
-</script>
+        }
+    </div>
+}
 
 @code {
     private List<WhatsAppGroup> _whatsAppGroups = new();
     private bool _loading = true;
 
-    // temp drag info
+    // Drag tracking
     private Guid _draggingUserId;
     private string? _dragFromWhatsAppGroupId;
 
     protected override async Task OnInitializedAsync()
     {
-        _whatsAppGroups = await Service.GetWhatsAppGroupsAsync();
+        ImportState.OnChange += ImportState_OnChange;
+
+        if (ImportState.HasGroups)
+        {
+            _whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
+        }
+
         _loading = false;
+    }
+
+    private async Task<List<WhatsAppGroup>?> SafeGetServiceGroupsAsync()
+    {
+        try
+        {
+            if (Service != null)
+            {
+                return await Service.GetWhatsAppGroupsAsync();
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void ImportState_OnChange()
+    {
+        InvokeAsync(async () =>
+        {
+            if (ImportState.HasGroups)
+            {
+                _whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
+            }
+            else
+            {
+                await ReloadFromService();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async Task ReloadFromService()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        _whatsAppGroups = (await SafeGetServiceGroupsAsync()) ?? new List<WhatsAppGroup>();
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private List<WhatsAppGroup> ConvertImportedToWhatsAppGroups(IEnumerable<WhatsAppGroup> imported)
+    {
+        var outList = new List<WhatsAppGroup>();
+        foreach (var ig in imported)
+        {
+            var wg = new WhatsAppGroup
+            {
+                Id = ig.Id ?? Guid.NewGuid().ToString(),
+                Name = ig.Name ?? string.Empty,
+                Users = ig.Users.Select(u => new Users
+                {
+                    Id = u.Id == Guid.Empty ? Guid.NewGuid() : u.Id,
+                    Name = u.Name ?? string.Empty,
+                    Rating = 0,
+                    Notes = string.Empty,
+                    PhoneNumber = u.PhoneNumber ?? string.Empty
+                }).ToList()
+            };
+            outList.Add(wg);
+        }
+        return outList;
     }
 
     private void OnDragStart(DragEventArgs e, Guid userId, string fromWhatsAppGroupId)
     {
-        // store the drag info server-side (no call to DataTransfer.SetData)
         _draggingUserId = userId;
         _dragFromWhatsAppGroupId = fromWhatsAppGroupId;
 
-        // optionally set the allowed effect, this doesn't call setData:
         if (e.DataTransfer != null)
         {
             e.DataTransfer.DropEffect = "move";
         }
-        // No DataTransfer.SetData call here — that caused the exception.
+
+        Console.WriteLine($"DragStart: {userId} from {fromWhatsAppGroupId}");
     }
 
     private async Task OnDrop(DragEventArgs e, string toWhatsAppGroupId)
     {
         if (_draggingUserId == Guid.Empty || string.IsNullOrEmpty(_dragFromWhatsAppGroupId)) return;
-        if (_dragFromWhatsAppGroupId == toWhatsAppGroupId) return; // no-op
+        if (_dragFromWhatsAppGroupId == toWhatsAppGroupId) return;
 
         _loading = true;
         StateHasChanged();
 
-        // call service to move
-        _whatsAppGroups = await Service.MoveUserAsync(_draggingUserId, _dragFromWhatsAppGroupId, toWhatsAppGroupId);
+        var fromGroup = _whatsAppGroups.FirstOrDefault(g => g.Id == _dragFromWhatsAppGroupId);
+        var toGroup = _whatsAppGroups.FirstOrDefault(g => g.Id == toWhatsAppGroupId);
 
-        // reset
+        if (fromGroup != null && toGroup != null)
+        {
+            var user = fromGroup.Users.FirstOrDefault(u => u.Id == _draggingUserId);
+            if (user != null)
+            {
+                fromGroup.Users.Remove(user);
+                toGroup.Users.Add(user);
+
+                // Optional service call
+                try
+                {
+                    var mi = Service?.GetType().GetMethod("MoveUserAsync");
+                    if (mi != null)
+                    {
+                        var task = (Task<List<WhatsAppGroup>>)mi.Invoke(Service, new object[] { user.Id, _dragFromWhatsAppGroupId, toWhatsAppGroupId })!;
+                        _whatsAppGroups = await task;
+                    }
+                }
+                catch { /* ignore */ }
+            }
+        }
+
         _draggingUserId = Guid.Empty;
         _dragFromWhatsAppGroupId = null;
+
         _loading = false;
         StateHasChanged();
     }
 
-    private string GetWhatsAppGroupColor(string name) => name switch
+    private string GetWhatsAppGroupColor(string name)
     {
-        var n when n.Contains("1") => "blue",
-        var n when n.Contains("2") => "red",
-        var n when n.Contains("3") => "purple",
-        _ => "orange"
-    };
-}
+        if (string.IsNullOrEmpty(name)) return "orange";
+        name = name.ToLowerInvariant();
+        if (name.Contains("1")) return "blue";
+        if (name.Contains("2")) return "red";
+        if (name.Contains("3")) return "purple";
+        return "orange";
+    }
 
+    public void Dispose()
+    {
+        ImportState.OnChange -= ImportState_OnChange;
+    }
+}

@@ -66,3 +66,81 @@ a, .btn-link {
     .blazor-error-boundary::after {
         content: "An error has occurred."
     }
+
+
+/* Import toolbar container (place above the board) */
+.import-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    margin: 0 20px 8px 20px;
+    background: transparent;
+}
+
+/* Button group */
+.import-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Base button look (to match group headers) */
+.btn-import {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 6px;
+    border: 0;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: transform .06s ease, box-shadow .08s ease, opacity .08s ease;
+    user-select: none;
+}
+
+    /* Icon inside button */
+    .btn-import .btn-icon {
+        font-size: 1.0rem;
+    }
+
+/* Blue gradient button like group header */
+.btn-import-blue {
+    background: linear-gradient(to right, #007bff, #0056b3);
+}
+
+/* Green variant for service import */
+.btn-import-green {
+    background: linear-gradient(to right, #28a745, #1e7e34);
+}
+
+/* Hover / active */
+.btn-import:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+}
+
+.btn-import:active {
+    transform: translateY(0);
+}
+
+/* Disabled look */
+.btn-import[disabled] {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Compact status text */
+.import-status {
+    color: #444;
+    font-size: .95rem;
+    font-weight: 600;
+    opacity: .9;
+}
+

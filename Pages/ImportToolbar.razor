@@ -1,0 +1,181 @@
+﻿@using System.Globalization
+@using CsvHelper
+@using CsvHelper.Configuration
+@using WhatsAppAdmin.Models
+@inject WhatsAppAdmin.Services.ImportStateService ImportState
+@inject IJSRuntime JS
+@inject WhatsAppAdmin.Services.IService Service
+
+<div class="import-toolbar">
+    <div class="import-actions">
+        <label class="btn-import btn-import-blue" for="csvFile">
+            <span class="btn-icon">📁</span>
+            Import from CSV file
+        </label>
+
+        <InputFile id="csvFile" style="display:none" OnChange="OnCsvSelected" />
+
+        <button class="btn-import btn-import-green" @onclick="ImportFromService">
+            <span class="btn-icon">🔁</span>
+            Import from service
+        </button>
+    </div>
+
+    <div class="import-status">
+        @if (isWorking)
+        {
+            <span>Working… (@statusMessage)</span>
+        }
+        else if (!string.IsNullOrEmpty(statusMessage))
+        {
+            <span>@statusMessage</span>
+        }
+    </div>
+</div>
+
+@code {
+    private bool isWorking = false;
+    private string? statusMessage;
+
+    // CSV parsing config - semicolon separated like your sample
+    private readonly CsvConfiguration _csvConfig = new(CultureInfo.InvariantCulture)
+    {
+        Delimiter = ";",
+        HasHeaderRecord = false,
+        IgnoreBlankLines = true,
+        TrimOptions = TrimOptions.Trim,
+        BadDataFound = null
+    };
+
+    private async Task OnCsvSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        isWorking = true;
+        statusMessage = $"Reading {file.Name}...";
+        StateHasChanged();
+
+        try
+        {
+            // Read file into memory (for small/medium files). Increase limit if needed.
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024).CopyToAsync(ms);
+            ms.Position = 0;
+            using var sr = new StreamReader(ms);
+            var csvText = await sr.ReadToEndAsync();
+
+            // Parse into groups
+            var groups = ParseCsvToGroups(csvText);
+
+            // store into import state (in-memory)
+            ImportState.SetGroups(groups);
+
+            statusMessage = $"Imported {groups.Sum(g => g.Users.Count)} rows into {groups.Count} groups.";
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"CSV import failed: {ex.Message}";
+        }
+        finally
+        {
+            isWorking = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ImportFromService()
+    {
+        isWorking = true;
+        statusMessage = "Importing from service...";
+        StateHasChanged();
+
+        try
+        {
+            List<WhatsAppGroup> serviceGroups;
+            try
+            {
+                serviceGroups = (await Service.GetWhatsAppGroupsAsync()) ?? new List<WhatsAppGroup>();
+            }
+            catch
+            {
+                serviceGroups = new List<WhatsAppGroup>();
+            }
+
+            // Convert service domain model into Import DTOs expected by ImportStateService
+            var imported = serviceGroups.Select(g => new WhatsAppGroup
+            {
+                Id = g.Id ?? Guid.NewGuid().ToString(),
+                Name = g.Name ?? string.Empty,
+                Users = g.Users?.Select(u => new Users
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    PhoneNumber = u.PhoneNumber ?? string.Empty   // store phone in Rating field of DTO (or adjust DTO)
+                }).ToList() ?? new List<Users>()
+            }).ToList();
+
+            // Push into ImportStateService so Index page will pick it up
+            ImportState.SetGroups(imported);
+
+            statusMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Service import failed: {ex.Message}";
+        }
+        finally
+        {
+            isWorking = false;
+            StateHasChanged();
+        }
+    }
+
+
+    private List<WhatsAppGroup> ParseCsvToGroups(string csvText)
+    {
+        var groups = new List<WhatsAppGroup>();
+        using var reader = new StringReader(csvText);
+        using var csv = new CsvReader(reader, _csvConfig);
+
+        while (csv.Read())
+        {
+            var record = csv.Parser.Record;
+            if (record == null || record.Length == 0) continue;
+
+            // columns: GroupName ; PlayerName ; PhoneNumber
+            var groupName = record.Length >= 1 ? (record[0] ?? "").Trim() : "";
+            var playerName = record.Length >= 2 ? (record[1] ?? "").Trim() : "";
+            var phoneRaw = record.Length >= 3 ? (record[2] ?? "").Trim() : "";
+
+            if (string.IsNullOrWhiteSpace(groupName) && string.IsNullOrWhiteSpace(playerName)) continue;
+
+            // normalize phone minimally
+            string phone = NormalizePhone(phoneRaw);
+
+            var group = groups.FirstOrDefault(g => string.Equals(g.Name, groupName, StringComparison.OrdinalIgnoreCase));
+            if (group == null)
+            {
+                group = new WhatsAppGroup { Name = groupName };
+                groups.Add(group);
+            }
+
+            group.Users.Add(new Users
+            {
+                Name = playerName,
+                PhoneNumber = phone
+            });
+        }
+
+        return groups;
+    }
+
+    private static string NormalizePhone(string phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return string.Empty;
+        phone = phone.Trim();
+        var leadingPlus = phone.StartsWith("+");
+        var digitsOnly = new string(phone.Where(char.IsDigit).ToArray());
+        return leadingPlus ? "+" + digitsOnly : digitsOnly;
+    }
+}

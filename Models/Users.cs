@@ -6,6 +6,6 @@
         public string Name { get; set; } = string.Empty;
         public int Rating { get; set; }
         public string Notes { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } // E.164 format
+        public required string PhoneNumber { get; set; } // E.164 format
     }
 }
