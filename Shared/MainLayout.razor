@@ -27,6 +27,12 @@
     </main>
 </div>
 
+<script>
+    window.showCustomContextMenu = function (event) {
+        event.preventDefault(); // block browser menu only on right-click targets
+    };
+</script>
+
 @code {
     private async Task Logout()
     {

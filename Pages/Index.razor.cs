@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using WhatsAppAdmin.Models;
 
@@ -384,5 +385,116 @@ namespace WhatsAppAdmin.Pages
         {
             return phone.Replace("+", "").Replace("@c.us", "").Trim();
         }
+
+        private bool _contextMenuVisible = false;
+        private string _contextMenuX = "0px";
+        private string _contextMenuY = "0px";
+        private string? _contextGroupName;
+
+        private void ShowContextMenu(MouseEventArgs e, string groupName)
+        {
+            _contextMenuVisible = true;
+            _contextMenuX = $"{e.ClientX}px";
+            _contextMenuY = $"{e.ClientY}px";
+            _contextGroupName = groupName;
+
+            StateHasChanged();
+        }
+
+        private async Task ConfirmDeleteGroup(string? groupName)
+        {
+            _contextMenuVisible = false;
+            if (string.IsNullOrWhiteSpace(groupName)) return;
+            await DeleteGroup(groupName);
+        }
+
+        private void HideContextMenu()
+        {
+            _contextMenuVisible = false;
+            StateHasChanged();
+        }
+
+        // fields for rename dialog
+        private bool _renameDialogVisible = false;
+        private string? _renameOriginalGroupName;
+        private string _renameNewName = string.Empty;
+        private bool _isRenaming = false;
+
+        /// <summary>
+        /// Called when user clicks 'Rename Group' in context menu.
+        /// Shows rename modal populated with current name.
+        /// </summary>
+        private void BeginRenameGroup(string? groupName)
+        {
+            _contextMenuVisible = false;
+            if (string.IsNullOrWhiteSpace(groupName))
+                return;
+
+            _renameOriginalGroupName = groupName;
+            _renameNewName = groupName; // prefill with current name
+            _renameDialogVisible = true;
+            StateHasChanged();
+        }
+
+        private void CloseRenameDialog()
+        {
+            _renameDialogVisible = false;
+            _renameOriginalGroupName = null;
+            _renameNewName = string.Empty;
+            StateHasChanged();
+        }
+
+        private async Task ConfirmRenameGroup()
+        {
+            if (string.IsNullOrWhiteSpace(_renameOriginalGroupName) || string.IsNullOrWhiteSpace(_renameNewName))
+                return;
+
+            try
+            {
+                _isRenaming = true;
+                StateHasChanged();
+
+                // find group object by name
+                var group = _whatsAppGroups.FirstOrDefault(g => g.Name == _renameOriginalGroupName);
+                if (group == null)
+                {
+                    // maybe it was an imported-only group (try find by Id if you saved it)
+                    CloseRenameDialog();
+                    return;
+                }
+
+                // call backend to update
+                if (!string.IsNullOrWhiteSpace(group.Id))
+                {
+                    // call WhapiService PUT /groups/{groupId}
+                    await WhapiService.UpdateGroupAsync(group.Id, _renameNewName);
+                }
+                else
+                {
+                    // It is a local/imported group that doesn't exist on WhatsApp yet; just rename locally
+                }
+
+                // update local model immediately
+                group.Name = _renameNewName;
+
+                // refresh server-side state to be safe (re-fetch groups)
+                await RefreshGroupsFromWhatsAppAsync();
+
+                CloseRenameDialog();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Rename failed: {ex.Message}");
+                // optionally show _statusMessage for user
+                _statusMessage = $"Rename failed: {ex.Message}";
+            }
+            finally
+            {
+                _isRenaming = false;
+                await RefreshGroupsFromWhatsAppAsync();
+                StateHasChanged();
+            }
+        }
+
     }
 }

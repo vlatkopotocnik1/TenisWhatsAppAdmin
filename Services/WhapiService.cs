@@ -182,6 +182,22 @@ namespace WhatsAppAdmin.Services
             await EnsureSuccess(response);
         }
 
+        public async Task UpdateGroupAsync(string groupId, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(groupId))
+                throw new ArgumentException("groupId is required", nameof(groupId));
+
+            var payload = new
+            {
+                subject = newName
+            };
+
+            // PUT /groups/{groupId}
+            var response = await _http.PutAsJsonAsync($"/groups/{groupId}", payload);
+            await EnsureSuccess(response);
+        }
+
+
         public async Task<string?> GetContactNameAsync(string phone)
         {
             // TO MANY API CALL FOR TESTING
