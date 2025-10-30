@@ -147,3 +147,34 @@ a, .btn-link {
     font-weight: 600;
     opacity: .9;
 }
+
+.group-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.delete-group-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease-in-out;
+}
+
+    .delete-group-btn:hover {
+        background: #c82333;
+        transform: scale(1.05);
+    }
+
+    .delete-group-btn:active {
+        transform: scale(0.95);
+    }

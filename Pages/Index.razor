@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using System.Text.Json
 @using WhatsAppAdmin.Models
 @using WhatsAppAdmin.Services
 @inject ImportStateService ImportState
@@ -19,28 +20,74 @@ else
 	<div class="whatsAppGroups-board">
 		@foreach (var whatsAppGroup in _whatsAppGroups)
 		{
-			<div class="whatsAppGroup-column"
-				 @ondrop="e => OnDrop(e, whatsAppGroup.Id)"
-				 @ondragover:preventDefault>
+			<div class="whatsAppGroup-column">
+				<div class="whatsAppGroup-header" data-status="@GetGroupStatus(whatsAppGroup)">
+					<div class="group-header-left" title="@whatsAppGroup.Name">
+						@whatsAppGroup.Name
+					</div>
 
-				<div class="whatsAppGroup-header" data-color="@GetWhatsAppGroupColor(whatsAppGroup.Name)">
-					@whatsAppGroup.Name
+					<div class="group-header-right">
+						@if (whatsAppGroup.IsNew)
+						{
+							<div class="group-status-badge group-status-new">🆕 Will be created</div>
+						}
+						else if (whatsAppGroup.ToAdd.Any() || whatsAppGroup.ToRemove.Any())
+						{
+							<div class="group-status-badge group-status-changed">⚙️ Has member changes</div>
+						}
+						else
+						{
+							<div class="group-status-badge group-status-unchanged">✅ No changes</div>
+						}
+						<button class="btn-delete"
+								title="Delete group"
+								@onclick="() => DeleteGroup(whatsAppGroup.Name)"
+								disabled="@(_deletingGroupName == whatsAppGroup.Name)">
+							@if (_deletingGroupName == whatsAppGroup.Name)
+							{
+								<span>⟳</span>
+							}
+							else
+							{
+								<span>🗑️</span>
+							}
+						</button>
+					</div>
 				</div>
 
 				<div class="whatsAppGroup-body">
+					@if (whatsAppGroup.Users.Count == 0 && !whatsAppGroup.ToAdd.Any())
+					{
+						<div class="empty-group">No users yet.</div>
+					}
 
 					@foreach (var user in whatsAppGroup.Users)
 					{
-						<div class="whatsAppGroup-grid user-row"
-							 draggable="true"
-							 tabindex="0"
-							 @ondragstart="e => OnDragStart(e, user.Id, whatsAppGroup.Id)">
-							<div class="user-main" style="text-align:center; padding:8px; white-space: nowrap;">
+						var isRemove = whatsAppGroup.ToRemove.Any(u => NormalizePhone(u.PhoneNumber) == NormalizePhone(user.PhoneNumber));
+						var css = isRemove ? "user-remove" : "user-row";
+
+						<div class="whatsAppGroup-grid @css" draggable="true" tabindex="0">
+							<div class="user-main">
 								@user.Name
+								@if (isRemove)
+								{
+									<span class="user-status user-status-remove">(Will be removed)</span>
+								}
 							</div>
-							<div class="user-details" role="region" aria-label="@($"{user.Name} details")">
+							<div class="user-details">
 								<div><strong>Phone:</strong> @user.PhoneNumber</div>
-								<div><strong>Notes:</strong> @user.Notes</div>
+							</div>
+						</div>
+					}
+
+					@foreach (var user in whatsAppGroup.ToAdd)
+					{
+						<div class="whatsAppGroup-grid user-add-preview">
+							<div class="user-main">
+								@user.Name <span class="user-status user-status-add">(Will be added)</span>
+							</div>
+							<div class="user-details">
+								<div><strong>Phone:</strong> @user.PhoneNumber</div>
 							</div>
 						</div>
 					}
@@ -48,13 +95,14 @@ else
 			</div>
 		}
 	</div>
+
 	@if (_whatsAppGroups.Count != 0)
 	{
 		<button class="btn-import btn-import-green"
-				@onclick="CreateGroupsOnWhatsApp"
+				@onclick="SyncGroupsOnWhatsApp"
 				disabled="@_isCreating">
-			<span class="btn-icon">👥</span>
-			@(_isCreating ? "Creating Groups…" : "Create WhatsApp Groups")
+			<span class="btn-icon">🔄</span>
+			@(_isCreating ? "Syncing Groups…" : "Sync WhatsApp Groups")
 		</button>
 		<button class="btn-import btn-import-red"
 				@onclick="DeleteAllGroupsFromWhatsApp"
@@ -66,264 +114,5 @@ else
 		{
 			<div class="import-status">@_statusMessage</div>
 		}
-	}
-}
-
-@code {
-	private List<WhatsAppGroup> _whatsAppGroups = new();
-	private bool _loading = true;
-	private bool _isCreating = false;
-	private string? _statusMessage;
-	private bool _isDeleting = false;
-
-	// Drag tracking
-	private Guid _draggingUserId;
-	private string? _dragFromWhatsAppGroupId;
-
-	protected override async Task OnInitializedAsync()
-	{
-		ImportState.OnChange += ImportState_OnChange;
-
-		if (ImportState.HasGroups)
-		{
-			_whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
-		}
-
-		_loading = false;
-	}
-
-	private async Task<List<WhatsAppGroup>?> SafeGetServiceGroupsAsync()
-	{
-		try
-		{
-			if (Service != null)
-			{
-				return await Service.GetWhatsAppGroupsAsync();
-			}
-			return null;
-		}
-		catch
-		{
-			return null;
-		}
-	}
-
-	private void ImportState_OnChange()
-	{
-		InvokeAsync(async () =>
-		{
-			if (ImportState.HasGroups)
-			{
-				_whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
-			}
-			else
-			{
-				await ReloadFromService();
-			}
-			StateHasChanged();
-		});
-	}
-
-	private async Task ReloadFromService()
-	{
-		_loading = true;
-		StateHasChanged();
-
-		_whatsAppGroups = (await SafeGetServiceGroupsAsync()) ?? new List<WhatsAppGroup>();
-
-		_loading = false;
-		StateHasChanged();
-	}
-
-	private void OnDragStart(DragEventArgs e, Guid userId, string fromWhatsAppGroupId)
-	{
-		_draggingUserId = userId;
-		_dragFromWhatsAppGroupId = fromWhatsAppGroupId;
-
-		if (e.DataTransfer != null)
-		{
-			e.DataTransfer.DropEffect = "move";
-		}
-
-		Console.WriteLine($"DragStart: {userId} from {fromWhatsAppGroupId}");
-	}
-
-	private async Task OnDrop(DragEventArgs e, string toWhatsAppGroupId)
-	{
-		if (_draggingUserId == Guid.Empty || string.IsNullOrEmpty(_dragFromWhatsAppGroupId)) return;
-		if (_dragFromWhatsAppGroupId == toWhatsAppGroupId) return;
-
-		_loading = true;
-		StateHasChanged();
-
-		var fromGroup = _whatsAppGroups.FirstOrDefault(g => g.Id == _dragFromWhatsAppGroupId);
-		var toGroup = _whatsAppGroups.FirstOrDefault(g => g.Id == toWhatsAppGroupId);
-
-		if (fromGroup != null && toGroup != null)
-		{
-			var user = fromGroup.Users.FirstOrDefault(u => u.Id == _draggingUserId);
-			if (user != null)
-			{
-				fromGroup.Users.Remove(user);
-				toGroup.Users.Add(user);
-
-				// Optional service call
-				try
-				{
-					var mi = Service?.GetType().GetMethod("MoveUserAsync");
-					if (mi != null)
-					{
-						var task = (Task<List<WhatsAppGroup>>)mi.Invoke(Service, new object[] { user.Id, _dragFromWhatsAppGroupId, toWhatsAppGroupId })!;
-						_whatsAppGroups = await task;
-					}
-				}
-				catch { /* ignore */ }
-			}
-		}
-
-		_draggingUserId = Guid.Empty;
-		_dragFromWhatsAppGroupId = null;
-
-		_loading = false;
-		StateHasChanged();
-	}
-
-	private string GetWhatsAppGroupColor(string name)
-	{
-		if (string.IsNullOrEmpty(name)) return "orange";
-		name = name.ToLowerInvariant();
-		if (name.Contains("1")) return "blue";
-		if (name.Contains("2")) return "red";
-		if (name.Contains("3")) return "purple";
-		return "orange";
-	}
-
-	private async Task CreateGroupsOnWhatsApp()
-	{
-		_isCreating = true;
-		_statusMessage = "Starting WhatsApp group creation…";
-		StateHasChanged();
-
-		try
-		{
-			int total = _whatsAppGroups.Count;
-			int current = 0;
-
-			foreach (var group in _whatsAppGroups)
-			{
-				current++;
-				_statusMessage = $"Creating group {current}/{total}: {group.Name}";
-				StateHasChanged();
-
-				var phones = group.Users
-					.Select(u => u.PhoneNumber)
-					.Where(p => !string.IsNullOrWhiteSpace(p))
-					.ToList();
-
-				if (phones.Count == 0)
-				{
-					_statusMessage += $"\n⚠️ Skipped {group.Name} (no valid numbers)";
-					continue;
-				}
-
-				try
-				{
-					var createdId = await WhapiService.CreateGroupAsync(group.Name, phones);
-					group.Id = createdId;
-					_statusMessage += $"\n✅ Created '{group.Name}' → {createdId}";
-				}
-				catch (Exception ex)
-				{
-					_statusMessage += $"\n❌ Failed '{group.Name}': {ex.Message}";
-				}
-
-				// short delay for readability / API pacing
-				await Task.Delay(500);
-			}
-
-			_statusMessage += "\nAll groups processed.";
-		}
-		catch (Exception ex)
-		{
-			_statusMessage = $"❌ Fatal error: {ex.Message}";
-		}
-		finally
-		{
-			_isCreating = false;
-			StateHasChanged();
-		}
-	}
-
-	private async Task DeleteAllGroupsFromWhatsApp()
-	{
-		_isDeleting = true;
-		_statusMessage = "Deleting all WhatsApp groups…";
-		StateHasChanged();
-
-		try
-		{
-			int total = _whatsAppGroups.Count;
-			int current = 0;
-
-			foreach (var group in _whatsAppGroups)
-			{
-				current++;
-				_statusMessage = $"Deleting group {current}/{total}: {group.Name}";
-				StateHasChanged();
-
-				try
-				{
-					// Replace this with your Whapi helper (same one you used for Create)
-					await WhapiService.DeleteGroupFullyAsync(group.Id);
-					_statusMessage += $"\n✅ Deleted '{group.Name}'";
-				}
-				catch (Exception ex)
-				{
-					_statusMessage += $"\n❌ Failed to delete '{group.Name}': {ex.Message}";
-				}
-
-				await Task.Delay(300); // slight delay to avoid hitting rate limits
-			}
-
-			_statusMessage += "\nAll groups processed.";
-		}
-		catch (Exception ex)
-		{
-			_statusMessage = $"❌ Fatal error: {ex.Message}";
-		}
-		finally
-		{
-			_isDeleting = false;
-			StateHasChanged();
-		}
-	}
-
-
-	public void Dispose()
-	{
-		ImportState.OnChange -= ImportState_OnChange;
-	}
-
-	private List<WhatsAppGroup> ConvertImportedToWhatsAppGroups(IEnumerable<WhatsAppGroup> imported)
-	{
-		var outList = new List<WhatsAppGroup>();
-		foreach (var ig in imported)
-		{
-			var wg = new WhatsAppGroup
-			{
-				Id = ig.Id ?? Guid.NewGuid().ToString(),
-				Name = ig.Name ?? string.Empty,
-				Users = ig.Users.Select(u => new Users
-				{
-					Id = u.Id == Guid.Empty ? Guid.NewGuid() : u.Id,
-					Name = u.Name ?? string.Empty,
-					Rating = 0,
-					Notes = string.Empty,
-					PhoneNumber = u.PhoneNumber ?? string.Empty
-				}).ToList()
-			};
-			outList.Add(wg);
-		}
-		return outList;
 	}
 }

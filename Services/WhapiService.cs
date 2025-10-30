@@ -1,5 +1,4 @@
 ﻿using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace WhatsAppAdmin.Services
@@ -22,6 +21,36 @@ namespace WhatsAppAdmin.Services
 
             _http.BaseAddress = new Uri(BaseUrl);
             _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        }
+
+        public async Task<List<JsonElement>> GetAllGroupsAsync()
+        {
+            //// Remove when PROD
+            //return await Task.FromResult(new List<JsonElement>());
+            var resp = await _http.GetAsync("/groups");
+            await EnsureSuccess(resp);
+
+            var json = await resp.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            var groups = new List<JsonElement>();
+
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    groups.Add(item.Clone()); // ✅ Clone to keep data alive after disposal
+                }
+            }
+            else if (doc.RootElement.TryGetProperty("groups", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in arr.EnumerateArray())
+                {
+                    groups.Add(item.Clone()); // ✅ Clone each item
+                }
+            }
+
+            return groups;
         }
 
         // --- Helpers ---
@@ -86,25 +115,52 @@ namespace WhatsAppAdmin.Services
             return doc.RootElement.Clone();
         }
 
-        public async Task DeleteGroupFullyAsync(string groupId)
+        public async Task SafeDeleteGroupAsync(string groupId)
         {
-            _logger.LogInformation("Deleting group {GroupId} fully...", groupId);
-
-            var participants = new List<string>();
+            _logger.LogInformation("🔍 Checking group {GroupId} before deletion...", groupId);
 
             var info = await GetGroupInfoAsync(groupId);
-            if (info.HasValue && info.Value.TryGetProperty("participants", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            if (!info.HasValue)
+            {
+                _logger.LogWarning("⚠️ Group {GroupId} not found.", groupId);
+                return;
+            }
+
+            var participants = new List<string>();
+            string? creatorId = null;
+
+            if (info.Value.TryGetProperty("participants", out var arr) && arr.ValueKind == JsonValueKind.Array)
             {
                 foreach (var p in arr.EnumerateArray())
                 {
+                    string? id = null;
+
                     if (p.ValueKind == JsonValueKind.String)
-                        participants.Add(Normalize(p.GetString()!));
+                        id = p.GetString();
                     else if (p.ValueKind == JsonValueKind.Object &&
                              p.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String)
-                        participants.Add(Normalize(idEl.GetString()!));
+                        id = idEl.GetString();
+
+                    if (!string.IsNullOrWhiteSpace(id))
+                        participants.Add(Normalize(id));
                 }
             }
 
+            // Optional: get the creator (for your own logic)
+            if (info.Value.TryGetProperty("created_by", out var creatorEl) && creatorEl.ValueKind == JsonValueKind.String)
+                creatorId = Normalize(creatorEl.GetString()!);
+
+            _logger.LogInformation("👥 Found {Count} participant(s) in group {GroupId}", participants.Count, groupId);
+
+            // ✅ CASE 1: Group has only one participant (the creator)
+            if (participants.Count == 1 && participants.First() == creatorId)
+            {
+                _logger.LogWarning("🚫 Cannot remove creator when they are the only member in group {GroupId}. Skipping removal.", groupId);
+                await LeaveGroupAsync(groupId);
+                return;
+            }
+
+            // ✅ CASE 2: Group has multiple members → remove all
             const int batchSize = 50;
             for (int i = 0; i < participants.Count; i += batchSize)
             {
@@ -113,8 +169,34 @@ namespace WhatsAppAdmin.Services
                 await RemoveParticipantsAsync(groupId, batch);
             }
 
+            // ✅ Finally, leave the group yourself
             await LeaveGroupAsync(groupId);
-            _logger.LogInformation("Left group {GroupId}", groupId);
+            _logger.LogInformation("✅ Left group {GroupId}", groupId);
+        }
+
+
+        public async Task AddParticipantsAsync(string groupId, IEnumerable<string> participants)
+        {
+            var payload = new { participants = participants.Select(Normalize).ToList() };
+            var response = await _http.PostAsJsonAsync($"/groups/{groupId}/participants", payload);
+            await EnsureSuccess(response);
+        }
+
+        public async Task<string?> GetContactNameAsync(string phone)
+        {
+            // TO MANY API CALL FOR TESTING
+            //phone = Normalize(phone);
+            //var resp = await _http.GetAsync($"/contacts/{phone}");
+            //if (!resp.IsSuccessStatusCode)
+            //    return null;
+
+            //using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            //if (doc.RootElement.TryGetProperty("pushName", out var nameEl))
+            //    return nameEl.GetString();
+            //if (doc.RootElement.TryGetProperty("name", out var altName))
+            //    return altName.GetString();
+
+            return await Task.FromResult(phone);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿/* Layout container */
+﻿/* --- WhatsApp Groups Board Layout --- */
 .whatsAppGroups-board {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -6,116 +6,234 @@
     padding: 20px;
 }
 
-/* Each whatsAppGroup box */
+/* --- Group Box --- */
 .whatsAppGroup-column {
     background: #fff;
     border: 2px solid #ddd;
-    border-radius: 6px;
+    border-radius: 10px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    /* allow absolutely-positioned children (tooltips) to render outside the box */
     overflow: visible;
     display: flex;
     flex-direction: column;
 }
 
-/* WhatsAppGroup header (colored bar) */
+/* --- Header --- */
 .whatsAppGroup-header {
     color: #fff;
     font-weight: bold;
     text-transform: uppercase;
-    text-align: center;
-    padding: 10px;
+    padding: 10px 14px;
     font-size: 1rem;
     border-bottom: 3px solid rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
 }
 
-    .whatsAppGroup-header[data-color="blue"] {
-        background: linear-gradient(to right, #007bff, #0056b3);
+
+.group-header-left {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.group-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.group-status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.group-status-new {
+    background: linear-gradient(to right, #43a047, #2e7d32);
+    color: #fff;
+}
+
+.group-status-changed {
+    background: linear-gradient(to right, #f39c12, #e67e22);
+    color: #fff;
+}
+
+.group-status-unchanged {
+    background: #8c8c8c;
+    color: #fff;
+}
+
+.delete-group-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease-in-out;
+    flex-shrink: 0;
+}
+
+    .delete-group-btn:hover {
+        background: #c82333;
+        transform: scale(1.1);
     }
 
-    .whatsAppGroup-header[data-color="red"] {
-        background: linear-gradient(to right, #ff4b4b, #b30000);
+    .delete-group-btn:active {
+        transform: scale(0.95);
     }
 
-    .whatsAppGroup-header[data-color="purple"] {
-        background: linear-gradient(to right, #9b59b6, #6f42c1);
-    }
+/* --- Header colors depending on status --- */
 
-    .whatsAppGroup-header[data-color="orange"] {
-        background: linear-gradient(to right, #ff9f43, #e67e22);
-    }
+/* 🆕 New group → light green gradient */
+.whatsAppGroup-header[data-status="new"] {
+    background: linear-gradient(135deg, #b9f6ca, #69f0ae);
+    color: #0c4a0c;
+}
 
-/* Grid rows (header + user rows) */
+/* ⚙️ Changed group → light yellow/orange */
+.whatsAppGroup-header[data-status="changed"] {
+    background: linear-gradient(135deg, #fff9c4, #ffe082);
+    color: #7a5c00;
+}
+
+/* ✅ Unchanged group → light gray/blue tint */
+.whatsAppGroup-header[data-status="unchanged"] {
+    background: linear-gradient(135deg, #eceff1, #cfd8dc);
+    color: #37474f;
+}
+
+/* --- Modern Status Badges --- */
+.group-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: none;
+    transition: all 0.25s ease-in-out;
+}
+
+/* 🆕 New Group */
+.group-status-new {
+    background: linear-gradient(90deg, #00c853, #4caf50);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
+    animation: pulseGlow 2s infinite;
+}
+
+/* ⚙️ Changed Group */
+.group-status-changed {
+    background: linear-gradient(135deg, #f1c40f, #b7950b);
+    color: #fffbea;
+    box-shadow: 0 0 8px rgba(255, 235, 59, 0.4);
+}
+
+/* ✅ Unchanged Group */
+.group-status-unchanged {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: #f7f7f7;
+    opacity: 0.9;
+}
+
+/* --- Badge Hover --- */
+.group-status-badge:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+/* --- Glow Animation --- */
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 10px rgba(76, 175, 80, 0.4); }
+    50% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.8); }
+}
+
+/* --- Title --- */
+.group-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* --- Grid Layout (Users) --- */
 .whatsAppGroup-grid {
     display: grid;
-    grid-template-columns: 1fr 60px 60px 60px 60px;
     text-align: center;
     align-items: center;
 }
 
-/* Header row styling */
+/* --- Header Row --- */
 .whatsAppGroup-grid-header {
     background-color: #f8f9fa;
     font-weight: bold;
     border-bottom: 2px solid #e0e0e0;
 }
 
-/* User rows */
+/* --- User Row --- */
 .user-row {
     border-bottom: 1px solid #e0e0e0;
     padding: 6px 4px;
     cursor: grab;
     transition: background 0.15s ease;
-}
-
-    .user-row:hover {
-        background-color: #f9f9f9;
-    }
-
-    .user-row:active {
-        cursor: grabbing;
-    }
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .whatsAppGroups-board {
-        grid-template-columns: 1fr;
-        gap: 16px;
-        padding: 10px;
-    }
-
-    .whatsAppGroup-grid {
-        grid-template-columns: 1fr 50px 50px 50px 50px;
-        font-size: 0.9rem;
-    }
-
-    .whatsAppGroup-header {
-        font-size: 0.95rem;
-        padding: 8px;
-    }
-}
-
-
-.user-row {
     position: relative;
-    cursor: grab;
-    padding-right: 12px;
 }
 
-.user-hint {
-    justify-self: end;
-    align-self: center;
-    padding-right: 10px;
-    opacity: 0.6;
-    font-size: 0.9rem;
-    pointer-events: none;
+.user-row:hover {
+    background-color: #f9f9f9;
 }
 
+.user-row:active {
+    cursor: grabbing;
+}
+
+/* --- Add/Remove Previews --- */
+.user-add-preview {
+    background-color: #e2f5e8;
+    border-left: 4px solid #28a745;
+}
+
+.user-remove {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+/* --- User Status Text --- */
+.user-status {
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-left: 4px;
+}
+
+.user-status-add {
+    color: #155724;
+}
+
+.user-status-remove {
+    color: #721c24;
+}
+
+/* --- Tooltip (User Details) --- */
 .user-details {
     display: none;
     position: absolute;
     left: 0;
-    top: calc(100% + 6px); /* show below the row with small spacing */
+    top: calc(100% + 6px);
     min-width: 220px;
     background: #fff;
     color: #222;
@@ -125,13 +243,24 @@
     border-radius: 6px;
     z-index: 10000;
     font-size: 0.95rem;
-    text-align: left;
     opacity: 0;
     transform: translateY(-4px);
     transition: opacity 150ms ease, transform 150ms ease;
 }
 
-/* reveal tooltip on hover/focus */
+/* --- Tooltip Arrow --- */
+.user-details::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 16px;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid #fff;
+    filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.05));
+}
+
+/* --- Show Tooltip on Hover --- */
 .user-row:hover .user-details,
 .user-row:focus-within .user-details {
     display: block;
@@ -139,26 +268,34 @@
     transform: translateY(0);
 }
 
-/* small arrow pointing up */
-.user-details::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 16px;
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid #fff;
-    filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.05));
+/* --- Empty Group --- */
+.empty-group {
+    font-style: italic;
+    color: #888;
+    padding: 8px;
 }
 
-.whatsAppGroup-grid.user-row {
-    align-items: center;
-    gap: 8px;
-}
-
+/* --- Responsive --- */
 @media (max-width: 768px) {
+    .whatsAppGroups-board {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 10px;
+    }
+
+    .whatsAppGroup-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        font-size: 0.95rem;
+        padding: 8px;
+    }
+
+    .whatsAppGroup-grid {
+        grid-template-columns: 1fr 50px 50px 50px 50px;
+        font-size: 0.9rem;
+    }
+
     .user-details {
         position: static;
         display: block;
@@ -167,8 +304,23 @@
         border: 1px solid rgba(0,0,0,0.04);
         background: #fafafa;
     }
-
-    .user-hint {
-        display: none;
-    }
 }
+
+.btn-delete {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: white;
+    transition: transform 0.2s, color 0.2s;
+    margin-left: auto;
+}
+
+    .btn-delete:hover {
+        color: #ff5252;
+        transform: scale(1.2);
+    }
+
+    .btn-delete[disabled] {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
