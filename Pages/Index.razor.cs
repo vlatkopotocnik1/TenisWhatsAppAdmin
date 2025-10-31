@@ -325,6 +325,11 @@ namespace WhatsAppAdmin.Pages
         private bool _showDeleteConfirm;
         private string? _pendingDeleteGroupName;
 
+
+        private string? _deletingUserName = null;
+        private bool _showDeleteUserConfirm;
+        private string? _pendingDeleteUserName;
+
         private void ShowDeleteConfirm(string groupName)
         {
             _pendingDeleteGroupName = groupName;
@@ -337,12 +342,26 @@ namespace WhatsAppAdmin.Pages
             _pendingDeleteGroupName = null;
         }
 
+        private void CancelDeleteUser()
+        {
+            _showDeleteUserConfirm = false;
+            _pendingDeleteUserName = null;
+        }
+
         private async Task ConfirmDeleteGroup()
         {
             _showDeleteConfirm = false;
             if (!string.IsNullOrEmpty(_pendingDeleteGroupName))
                 await DeleteGroup(_pendingDeleteGroupName);
             _pendingDeleteGroupName = null;
+        }
+
+        private async Task ConfirmDeleteUser()
+        {
+            _showDeleteUserConfirm = false;
+            if (!string.IsNullOrEmpty(_pendingDeleteUserName))
+                await DeleteUser(_pendingDeleteUserName);
+            _pendingDeleteUserName = null;
         }
         private async Task DeleteGroup(string groupName)
         {
@@ -369,6 +388,49 @@ namespace WhatsAppAdmin.Pages
             {
                 await JS.InvokeVoidAsync("showToast", $"✅ Group deleted.", "error");
                 _deletingGroupName = null;
+                await RefreshGroupsFromWhatsAppAsync();
+                StateHasChanged();
+            }
+        }
+
+        private async Task DeleteUser(string userName)
+        {
+            try
+            {
+                StateHasChanged();
+
+                // Find the group that contains this user
+                var group = _whatsAppGroups.FirstOrDefault(g => g.Users.Any(u => u.Name == userName || u.PhoneNumber == userName));
+                if (group == null)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"⚠️ Could not find a group for user {userName}.", "error");
+                    return;
+                }
+
+                var user = group.Users.FirstOrDefault(u => u.Name == userName || u.PhoneNumber == userName);
+                if (user == null)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"⚠️ User {userName} not found in group {group.Name}.", "error");
+                    return;
+                }
+
+                await JS.InvokeVoidAsync("showToast", $"Removing {user.PhoneNumber} from {group.Name}…", "info");
+
+                if (!string.IsNullOrEmpty(group.Id))
+                {
+                    await WhapiService.RemoveParticipantsAsync(group.Id, new[] { user.PhoneNumber });
+                }
+
+                group.Users.Remove(user);
+
+                await JS.InvokeVoidAsync("showToast", $"✅ User {user.PhoneNumber} removed from {group.Name}.", "success");
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("showToast", $"❌ Error removing user '{userName}': {ex.Message}", "error");
+            }
+            finally
+            {
                 await RefreshGroupsFromWhatsAppAsync();
                 StateHasChanged();
             }
@@ -410,12 +472,29 @@ namespace WhatsAppAdmin.Pages
         private string _contextMenuY = "0px";
         private string? _contextGroupName;
 
+        private bool _contextUserMenuVisible = false;
+        private string _contextUserMenuX = "0px";
+        private string _contextUserMenuY = "0px";
+        private string? _contextUserName;
+
         private void ShowContextMenu(MouseEventArgs e, string groupName)
         {
             _contextMenuVisible = true;
+            _contextUserMenuVisible = false;
             _contextMenuX = $"{e.ClientX}px";
             _contextMenuY = $"{e.ClientY}px";
             _contextGroupName = groupName;
+
+            StateHasChanged();
+        }
+
+        private void ShowUserContextMenu(MouseEventArgs e, string userName)
+        {
+            _contextUserMenuVisible = true;
+            _contextMenuVisible = false;
+            _contextUserMenuX = $"{e.ClientX}px";
+            _contextUserMenuY = $"{e.ClientY}px";
+            _contextUserName = userName;
 
             StateHasChanged();
         }
@@ -427,9 +506,23 @@ namespace WhatsAppAdmin.Pages
             ShowDeleteConfirm(groupName);
         }
 
+        private void ConfirmDeleteUser(string? userName)
+        {
+            _contextUserMenuVisible = false;
+            if (string.IsNullOrWhiteSpace(userName)) return;
+            ShowDeleteUserConfirm(userName);
+        }
+
+        private void ShowDeleteUserConfirm(string userName)
+        {
+            _pendingDeleteUserName = userName;
+            _showDeleteUserConfirm = true;
+        }
+
         private void HideContextMenu()
         {
             _contextMenuVisible = false;
+            _contextUserMenuVisible = false;
             InvokeAsync(StateHasChanged);
         }
 

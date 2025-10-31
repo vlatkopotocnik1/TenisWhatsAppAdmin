@@ -72,7 +72,10 @@ else
 						var isRemove = whatsAppGroup.ToRemove.Any(u => NormalizePhone(u.PhoneNumber) == NormalizePhone(user.PhoneNumber));
 						var css = isRemove ? "user-remove" : "user-row";
 
-						<div class="whatsAppGroup-grid @css" draggable="true" tabindex="0">
+						<div class="whatsAppGroup-grid @css" draggable="true" tabindex="0"
+							 @oncontextmenu:preventDefault
+							 @oncontextmenu:stopPropagation
+							 @oncontextmenu="e => ShowUserContextMenu(e, user.Name)">
 							<div class="user-main">
 								@user.Name
 								@if (isRemove)
@@ -109,10 +112,19 @@ else
 				➕ Add User
 			</div>
 			<div class="context-item" @onclick="() => BeginRenameGroup(_contextGroupName)">
-				✏️ Rename Group
+				🖊️ Rename Group
 			</div>
 			<div class="context-item" @onclick="() => ConfirmDeleteGroup(_contextGroupName)">
 				🗑️ Delete Group
+			</div>
+		</div>
+	}
+
+	@if (_contextUserMenuVisible)
+	{
+		<div class="context-menu" style="top: @_contextUserMenuY; left: @_contextUserMenuX;">
+			<div class="context-item" @onclick="() => ConfirmDeleteUser(_contextUserName)">
+				🗑️ Delete User
 			</div>
 		</div>
 	}
@@ -182,6 +194,22 @@ else
 				<div style="display:flex; justify-content:flex-end; gap:8px;">
 					<button class="btn btn-secondary" @onclick="CancelDeleteGroup">Cancel</button>
 					<button class="btn btn-danger" @onclick="ConfirmDeleteGroup">Delete</button>
+				</div>
+			</div>
+		</div>
+	}
+
+	@if (_showDeleteUserConfirm)
+	{
+		<div class="modal-backdrop" style="position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000;">
+			<div class="confirm-modal" style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; padding:20px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); text-align:center; z-index:10001;">
+				<div style="font-weight:700; margin-bottom:12px;">Delete User</div>
+				<div style="margin-bottom:16px;">
+					Are you sure you want to permanently delete <strong>@_pendingDeleteUserName</strong>?
+				</div>
+				<div style="display:flex; justify-content:flex-end; gap:8px;">
+					<button class="btn btn-secondary" @onclick="CancelDeleteUser">Cancel</button>
+					<button class="btn btn-danger" @onclick="ConfirmDeleteUser">Delete</button>
 				</div>
 			</div>
 		</div>
