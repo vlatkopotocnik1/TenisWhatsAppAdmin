@@ -307,25 +307,6 @@
     }
 }
 
-.btn-delete {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: white;
-    transition: transform 0.2s, color 0.2s;
-    margin-left: auto;
-}
-
-    .btn-delete:hover {
-        color: #ff5252;
-        transform: scale(1.2);
-    }
-
-    .btn-delete[disabled] {
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-
 .context-item {
     padding: 10px 12px;
     cursor: pointer;
@@ -336,7 +317,7 @@
         background: #f5f5f5;
     }
 
-.rename-modal input.form-control {
+.app-modal input.form-control {
     width: 100%;
     box-sizing: border-box;
 }
@@ -348,24 +329,15 @@
     cursor: pointer;
 }
 
-.btn-primary {
-    background: #157347;
-    color: #fff;
-}
-
 .btn-secondary {
     background: #e8e8e8;
     color: #333;
 }
 
-.field {
-    margin-bottom: 10px;
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 10000;
 }
-
-    .field label {
-        display: block;
-        font-size: 13px;
-        color: #333;
-        margin-bottom: 4px;
-    }
 

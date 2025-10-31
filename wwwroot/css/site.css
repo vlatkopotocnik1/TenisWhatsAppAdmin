@@ -12,12 +12,6 @@ a, .btn-link {
     color: #0071c1;
 }
 
-.btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
-}
-
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
@@ -102,17 +96,6 @@ a, .btn-link {
         text-align: center;
     }
 
-
-/* Import toolbar container */
-.import-toolbar {
-    display: flex;
-    flex-direction: column; /* stack vertically */
-    align-items: center; /* center horizontally */
-    justify-content: center;
-    gap: 16px;
-    background: transparent;
-}
-
 /* Button container (vertical stack) */
 .import-actions {
     display: flex;
@@ -180,38 +163,6 @@ a, .btn-link {
     text-align: center;
 }
 
-
-.group-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.delete-group-btn {
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    font-size: 1rem;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: all 0.2s ease-in-out;
-}
-
-    .delete-group-btn:hover {
-        background: #c82333;
-        transform: scale(1.05);
-    }
-
-    .delete-group-btn:active {
-        transform: scale(0.95);
-    }
-
 .context-menu {
     position: absolute;
     background: #e7e6e6;
@@ -226,39 +177,7 @@ a, .btn-link {
     color: #111b21;
     animation: waMenuFadeIn 0.12s ease-out;
 }
-
-.context-menu-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 16px;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background 0.15s ease;
-    user-select: none;
-}
-
-    .context-menu-item:hover {
-        background: #dfdddc;
-    }
-
-    .context-menu-item:active {
-        background: #e4e6eb;
-    }
-
-    .context-menu-item span {
-        display: inline-flex;
-        align-items: center;
-        font-size: 15px;
-    }
-
-    .context-menu-item svg,
-    .context-menu-item img {
-        width: 18px;
-        height: 18px;
-        opacity: 0.85;
-    }
-
+  
 @keyframes waMenuFadeIn {
     from {
         opacity: 0;

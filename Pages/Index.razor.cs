@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using WhatsAppAdmin.Models;
+using WhatsAppAdmin.Services;
 
 namespace WhatsAppAdmin.Pages
 {
@@ -23,25 +24,26 @@ namespace WhatsAppAdmin.Pages
             {
                 _whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
             }
-            else
-            {
-                var groupsFromWhatsApp = await WhapiService.GetAllGroupsAsync();
-                _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp);
+            //else
+            //{
+            //    var groupsFromWhatsApp = await WhapiService.GetAllGroupsAsync();
+            //    _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp);
 
-                // 👇 Replace phone numbers with names
-                foreach (var group in _whatsAppGroups)
-                {
-                    foreach (var user in group.Users)
-                    {
-                        var name = await WhapiService.GetContactNameAsync(user.PhoneNumber);
-                        if (!string.IsNullOrWhiteSpace(name))
-                        {
-                            user.Name = name;
-                        }
-                    }
-                }
-            }
+            //    // 👇 Replace phone numbers with names
+            //    foreach (var group in _whatsAppGroups)
+            //    {
+            //        foreach (var user in group.Users)
+            //        {
+            //            var name = await WhapiService.GetContactNameAsync(user.PhoneNumber);
+            //            if (!string.IsNullOrWhiteSpace(name))
+            //            {
+            //                user.Name = name;
+            //            }
+            //        }
+            //    }
+            //}
             await RefreshGroupsFromWhatsAppAsync();
+            GlobalEvents.OnHideContextMenu += HideContextMenu;
             _loading = false;
         }
 
@@ -197,6 +199,7 @@ namespace WhatsAppAdmin.Pages
         public void Dispose()
         {
             ImportState.OnChange -= ImportState_OnChange;
+            GlobalEvents.OnHideContextMenu -= HideContextMenu;
         }
 
         private List<WhatsAppGroup> ConvertWhatsAppApiGroups(List<JsonElement> apiGroups)
@@ -427,7 +430,7 @@ namespace WhatsAppAdmin.Pages
         private void HideContextMenu()
         {
             _contextMenuVisible = false;
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         }
 
         // fields for rename dialog

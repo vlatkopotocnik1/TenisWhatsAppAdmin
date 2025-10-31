@@ -1,40 +1,45 @@
-﻿@inherits LayoutComponentBase
+﻿@using WhatsAppAdmin.Services
+@inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>WhatsAppAdmin</PageTitle>
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<div class="page" @onclick="HandleGlobalClick" @oncontextmenu="HandleGlobalClick">
+	<div class="sidebar">
+		<NavMenu />
+	</div>
 
-    <main>
-        <div class="top-row px-4">
-            <AuthorizeView>
-                <Authorized>
-                    <a href="" @onclick="Logout">Logout</a>
-                </Authorized>
-                <NotAuthorized>
-                    <a href="/login">Login</a>
-                </NotAuthorized>
-            </AuthorizeView>
-        </div>
+	<main>
+		<div class="top-row px-4">
+			<AuthorizeView>
+				<Authorized>
+					<a href="" @onclick="Logout">Logout</a>
+				</Authorized>
+				<NotAuthorized>
+					<a href="/login">Login</a>
+				</NotAuthorized>
+			</AuthorizeView>
+		</div>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+		<article class="content px-4">
+			@Body
+		</article>
+	</main>
 </div>
 
 @code {
-    private async Task Logout()
-    {
-        if (AuthStateProvider is WhatsAppAdmin.Authentication.AuthStateProvider Auth)
-        {
-            await Auth.LogoutAsync();
-        }
+	private async Task Logout()
+	{
+		if (AuthStateProvider is WhatsAppAdmin.Authentication.AuthStateProvider Auth)
+		{
+			await Auth.LogoutAsync();
+		}
 
-        Navigation.NavigateTo("/login", forceLoad: true);
-    }
+		Navigation.NavigateTo("/login", forceLoad: true);
+	}
+	private void HandleGlobalClick()
+	{
+		GlobalEvents.RaiseHideContextMenu();
+	}
 }
