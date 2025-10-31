@@ -27,9 +27,18 @@
     </main>
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf/notyf.min.css">
+<script src="https://cdn.jsdelivr.net/npm/notyf/notyf.min.js"></script>
 <script>
+
     window.showCustomContextMenu = function (event) {
         event.preventDefault(); // block browser menu only on right-click targets
+    };
+
+    window.showToast = function (msg, type) {
+      const notyf = new Notyf({ duration: 2500, position: { x: 'right', y: 'bottom' } });
+      if (type === 'error') notyf.error(msg);
+      else notyf.success(msg);
     };
 </script>
 

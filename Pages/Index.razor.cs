@@ -11,7 +11,6 @@ namespace WhatsAppAdmin.Pages
         private List<WhatsAppGroup> _whatsAppGroups = new();
         private bool _loading = true;
         private bool _isCreating = false;
-        private string? _statusMessage;
         private bool _isDeleting = false;
 
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
@@ -102,7 +101,8 @@ namespace WhatsAppAdmin.Pages
         private async Task SyncGroupsOnWhatsApp()
         {
             _isCreating = true;
-            _statusMessage = "Starting group sync…";
+
+            await JS.InvokeVoidAsync("showToast", "Starting group sync…", "info");
             StateHasChanged();
 
             try
@@ -114,7 +114,7 @@ namespace WhatsAppAdmin.Pages
                         // create group
                         var phones = group.Users.Select(u => u.PhoneNumber).ToList();
                         group.Id = await WhapiService.CreateGroupAsync(group.Name, phones);
-                        _statusMessage += $"\n✅ Created new group '{group.Name}' → {group.Id}";
+                        await JS.InvokeVoidAsync("showToast", $"✅ Created new group '{group.Name}' → {group.Id}", "success");
                     }
                     else
                     {
@@ -122,24 +122,24 @@ namespace WhatsAppAdmin.Pages
                         if (group.ToAdd.Any())
                         {
                             await WhapiService.AddParticipantsAsync(group.Id, group.ToAdd.Select(u => u.PhoneNumber));
-                            _statusMessage += $"\n✅ Added {group.ToAdd.Count} users to '{group.Name}'";
+                            await JS.InvokeVoidAsync("showToast", $"✅ Added {group.ToAdd.Count} users to '{group.Name}'", "success");
                         }
 
                         if (group.ToRemove.Any())
                         {
                             await WhapiService.RemoveParticipantsAsync(group.Id, group.ToRemove.Select(u => u.PhoneNumber));
-                            _statusMessage += $"\n⚠️ Removed {group.ToRemove.Count} users from '{group.Name}'";
+                            await JS.InvokeVoidAsync("showToast", $"⚠️ Removed {group.ToRemove.Count} users from '{group.Name}'", "error");
                         }
                     }
 
                     await Task.Delay(300); // gentle pacing
                 }
                 await RefreshGroupsFromWhatsAppAsync();
-                _statusMessage += "\n✅ Sync complete.";
+                await JS.InvokeVoidAsync("showToast", "✅ Sync complete.", "success");
             }
             catch (Exception ex)
             {
-                _statusMessage = $"❌ Error during sync: {ex.Message}";
+                await JS.InvokeVoidAsync("showToast", $"❌ Error during sync: {ex.Message}", "error");
             }
             finally
             {
@@ -151,7 +151,7 @@ namespace WhatsAppAdmin.Pages
         private async Task DeleteAllGroupsFromWhatsApp()
         {
             _isDeleting = true;
-            _statusMessage = "Deleting all WhatsApp groups…";
+            await JS.InvokeVoidAsync("showToast", "Deleting all WhatsApp groups…", "info");
             StateHasChanged();
 
             try
@@ -162,28 +162,29 @@ namespace WhatsAppAdmin.Pages
                 foreach (var group in _whatsAppGroups)
                 {
                     current++;
-                    _statusMessage = $"Deleting group {current}/{total}: {group.Name}";
+
+                    await JS.InvokeVoidAsync("showToast", $"Deleting group {current}/{total}: {group.Name}", "error");
                     StateHasChanged();
 
                     try
                     {
-                        // Replace this with your Whapi helper (same one you used for Create)
                         await WhapiService.SafeDeleteGroupAsync(group.Id);
-                        _statusMessage += $"\n✅ Deleted '{group.Name}'";
+
+                        await JS.InvokeVoidAsync("showToast", $"✅ Deleted '{group.Name}'", "error");
                     }
                     catch (Exception ex)
                     {
-                        _statusMessage += $"\n❌ Failed to delete '{group.Name}': {ex.Message}";
+                        await JS.InvokeVoidAsync("showToast", $"❌ Failed to delete '{group.Name}': {ex.Message}", "error");
                     }
 
                     await Task.Delay(300); // slight delay to avoid hitting rate limits
                 }
 
-                _statusMessage += "\nAll groups processed.";
+                await JS.InvokeVoidAsync("showToast", "All groups processed.", "success");
             }
             catch (Exception ex)
             {
-                _statusMessage = $"❌ Fatal error: {ex.Message}";
+                await JS.InvokeVoidAsync("showToast", $"❌ Fatal error: {ex.Message}", "error");
             }
             finally
             {
@@ -318,19 +319,32 @@ namespace WhatsAppAdmin.Pages
         }
 
         private string? _deletingGroupName = null;
+        private bool _showDeleteConfirm;
+        private string? _pendingDeleteGroupName;
 
+        private void ShowDeleteConfirm(string groupName)
+        {
+            _pendingDeleteGroupName = groupName;
+            _showDeleteConfirm = true;
+        }
+
+        private void CancelDeleteGroup()
+        {
+            _showDeleteConfirm = false;
+            _pendingDeleteGroupName = null;
+        }
+
+        private async Task ConfirmDeleteGroup()
+        {
+            _showDeleteConfirm = false;
+            if (!string.IsNullOrEmpty(_pendingDeleteGroupName))
+                await DeleteGroup(_pendingDeleteGroupName);
+            _pendingDeleteGroupName = null;
+        }
         private async Task DeleteGroup(string groupName)
         {
             try
             {
-                bool confirm = await JSRuntime.InvokeAsync<bool>(
-                    "confirm",
-                    $"Are you sure you want to permanently delete '{groupName}'?"
-                );
-
-                if (!confirm)
-                    return;
-
                 _deletingGroupName = groupName;
                 StateHasChanged();
 
@@ -338,6 +352,7 @@ namespace WhatsAppAdmin.Pages
                 if (groupToRemove == null)
                     return;
 
+                await JS.InvokeVoidAsync("showToast", $"Deleting group {groupToRemove.Name}.", "error");
                 if (!string.IsNullOrEmpty(groupToRemove.Id))
                     await WhapiService.SafeDeleteGroupAsync(groupToRemove.Id);
 
@@ -345,10 +360,11 @@ namespace WhatsAppAdmin.Pages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error deleting group '{groupName}': {ex.Message}");
+                await JS.InvokeVoidAsync("showToast", $"❌ Error deleting group '{groupName}': {ex.Message}", "error");
             }
             finally
             {
+                await JS.InvokeVoidAsync("showToast", $"✅ Group deleted.", "error");
                 _deletingGroupName = null;
                 await RefreshGroupsFromWhatsAppAsync();
                 StateHasChanged();
@@ -377,7 +393,7 @@ namespace WhatsAppAdmin.Pages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Failed to refresh groups: {ex.Message}");
+                await JS.InvokeVoidAsync("showToast", $"❌ Failed to refresh groups: {ex.Message}", "error");
             }
         }
 
@@ -401,11 +417,11 @@ namespace WhatsAppAdmin.Pages
             StateHasChanged();
         }
 
-        private async Task ConfirmDeleteGroup(string? groupName)
+        private void ConfirmDeleteGroup(string? groupName)
         {
             _contextMenuVisible = false;
             if (string.IsNullOrWhiteSpace(groupName)) return;
-            await DeleteGroup(groupName);
+            ShowDeleteConfirm(groupName);
         }
 
         private void HideContextMenu()
@@ -424,7 +440,7 @@ namespace WhatsAppAdmin.Pages
         /// Called when user clicks 'Rename Group' in context menu.
         /// Shows rename modal populated with current name.
         /// </summary>
-        private void BeginRenameGroup(string? groupName)
+        private void BeginRenameGroup(string groupName)
         {
             _contextMenuVisible = false;
             if (string.IsNullOrWhiteSpace(groupName))
@@ -484,12 +500,12 @@ namespace WhatsAppAdmin.Pages
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Rename failed: {ex.Message}");
-                // optionally show _statusMessage for user
-                _statusMessage = $"Rename failed: {ex.Message}";
+                await JS.InvokeVoidAsync("showToast", $"Rename failed: {ex.Message}", "error");
             }
             finally
             {
+
+                await JS.InvokeVoidAsync("showToast", $"✅ Group renamed.", "success");
                 _isRenaming = false;
                 await RefreshGroupsFromWhatsAppAsync();
                 StateHasChanged();
@@ -521,25 +537,31 @@ namespace WhatsAppAdmin.Pages
         {
             if (string.IsNullOrWhiteSpace(_newUserPhone))
             {
-                _statusMessage = $"⚠️ Please enter a phone number.";
+                await JS.InvokeVoidAsync("showToast", $"⚠️ Please enter a phone number.", "error");
                 return;
             }
             _isAddNewUser = true;
             try
             {
                 await WhapiService.AddUserToGroupAsync(_selectedGroupName, _newUserPhone);
-                _statusMessage = $"✅ User {_newUserPhone} added to {_selectedGroupName}.";
+                await JS.InvokeVoidAsync("showToast", $"✅ User {_newUserPhone} added to {_selectedGroupName}.", "success");
                 await RefreshGroupsFromWhatsAppAsync();
             }
             catch (Exception ex)
             {
-                _statusMessage = $"❌ Failed to add user: {ex.Message}";
+                await JS.InvokeVoidAsync("showToast", $"❌ Failed to add user: {ex.Message}", "error");
             }
             finally
             {
                 _showAddUserModal = false;
             }
         }
-
+        private async Task HandleKeyPress(KeyboardEventArgs e)
+        {
+            if (e.Key == "Enter" && !_isAddNewUser && !string.IsNullOrWhiteSpace(_newUserPhone))
+            {
+                await ConfirmAddUser();
+            }
+        }
     }
 }

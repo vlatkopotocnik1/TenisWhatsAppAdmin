@@ -1,48 +1,51 @@
 ﻿@using WhatsAppAdmin.Authentication
 @using Microsoft.AspNetCore.Components.Authorization
+@using WhatsAppAdmin.Pages
 @inject NavigationManager Navigation
 @inject WhatsAppAdmin.Authentication.AuthStateProvider AuthStateProvider
 
 <AuthorizeView>
-    <Authorized>
-        <div class="top-row ps-3 navbar navbar-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="/">WhatsAppAdmin</a>
-                <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-            </div>
-        </div>
+	<Authorized>
+		<div class="top-row ps-3 navbar navbar-dark">
+			<div class="container-fluid">
+				<a class="navbar-brand" href="/">WhatsAppAdmin</a>
+				<button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+					<span class="navbar-toggler-icon"></span>
+				</button>
+			</div>
+		</div>
 
-        <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+		        <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
             <nav class="flex-column">
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                <div class="nav-item">
+
+					<ImportToolbar />
+@*                     <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
                         <span class="oi oi-home" aria-hidden="true"></span> Home
-                    </NavLink>
+                    </NavLink> *@
                 </div>
             </nav>
         </div>
-    </Authorized>
+	</Authorized>
 
-    <NotAuthorized>
-        @* Optionally show nothing, or show a small login link *@
-    </NotAuthorized>
+	<NotAuthorized>
+		@* Optionally show nothing, or show a small login link *@
+	</NotAuthorized>
 </AuthorizeView>
 
 @code {
-    private bool collapseNavMenu = true;
+	private bool collapseNavMenu = true;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+	private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
+	private void ToggleNavMenu()
+	{
+		collapseNavMenu = !collapseNavMenu;
+	}
 
-    private async Task Logout()
-    {
-        await AuthStateProvider.LogoutAsync();
-        Navigation.NavigateTo("/login");
-    }
+	private async Task Logout()
+	{
+		await AuthStateProvider.LogoutAsync();
+		Navigation.NavigateTo("/login");
+	}
 }

@@ -96,6 +96,7 @@ a, .btn-link {
 
     /* Make buttons full width (optional for cleaner sidebar look) */
     .import-toolbar .btn-import {
+        font-size: small;
         width: 100%;
         max-width: 220px; /* optional limit */
         text-align: center;
@@ -109,7 +110,6 @@ a, .btn-link {
     align-items: center; /* center horizontally */
     justify-content: center;
     gap: 16px;
-    padding: 20px;
     background: transparent;
 }
 
@@ -123,22 +123,22 @@ a, .btn-link {
 
 /* Import buttons */
 .btn-import {
+    font-size: small;
+    white-space: nowrap;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    width: 200px; /* fixed width for clean alignment */
     padding: 12px 16px;
-    font-weight: 700;
     text-transform: uppercase;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     color: #fff;
-    font-size: 0.95rem;
     box-shadow: 0 3px 8px rgba(0,0,0,0.15);
     transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.2s ease;
 }
+
 
 /* Button color styles */
 .btn-import-blue {
@@ -147,6 +147,10 @@ a, .btn-link {
 
 .btn-import-green {
     background: linear-gradient(to right, #28a745, #1e7e34);
+}
+
+.btn-import-red {
+    background: linear-gradient(to right, #ff4b4b, #b30000);
 }
 
 /* Hover effects */
