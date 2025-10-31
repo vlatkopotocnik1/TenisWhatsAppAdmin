@@ -103,17 +103,7 @@ else
 
 	@if (_contextMenuVisible)
 	{
-		<div class="context-menu"
-			 style="position:absolute;
-		                    top:@_contextMenuY;
-		                    left:@_contextMenuX;
-		                    background:white;
-		                    border:1px solid #ccc;
-		                    border-radius:6px;
-		                    box-shadow:0 2px 8px rgba(0,0,0,0.16);
-		                    z-index:9999;
-		                    min-width:160px;">
-
+		<div class="context-menu" style="top: @_contextMenuY; left: @_contextMenuX;">
 			<div class="context-item" @onclick="() => ShowAddUserModal(_contextGroupName)">
 				➕ Add User
 			</div>

@@ -14,6 +14,8 @@
     <link href="WhatsAppAdmin.styles.css" rel="stylesheet" />
     <link href="css/table.css" rel="stylesheet" />
     <link rel="icon" type="image/png" href="favicon.png"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf/notyf.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/notyf/notyf.min.js"></script>
     <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered" />
 </head>
 <body>
@@ -31,5 +33,16 @@
     </div>
 
     <script src="_framework/blazor.server.js"></script>
+    <script>
+        window.showCustomContextMenu = function (event) {
+            event.preventDefault(); // block browser menu only on right-click targets
+        };
+
+        window.showToast = function (msg, type) {
+          const notyf = new Notyf({ duration: 2500, position: { x: 'right', y: 'bottom' } });
+          if (type === 'error') notyf.error(msg);
+          else notyf.success(msg);
+        };
+    </script>
 </body>
 </html>

@@ -11,7 +11,7 @@ namespace WhatsAppAdmin.Authentication
 
         // Hardcoded credentials - CHANGE BEFORE PRODUCTION
         private const string HardcodedUsername = "admin";
-        private const string HardcodedPassword = "admin";
+        private const string HardcodedPassword = "321Vsite+";
 
         public AuthStateProvider(ProtectedSessionStorage sessionStorage)
         {
