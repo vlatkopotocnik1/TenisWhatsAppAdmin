@@ -495,6 +495,51 @@ namespace WhatsAppAdmin.Pages
                 StateHasChanged();
             }
         }
+        // Modal state
+        private bool _showAddUserModal = false;
+        private bool _isAddNewUser = false;
+        private string _selectedGroupName = string.Empty;
+        private string _newUserPhone = string.Empty;
+
+        // Show modal
+        private void ShowAddUserModal(string groupName)
+        {
+            _selectedGroupName = groupName;
+            _newUserPhone = string.Empty;
+            _showAddUserModal = true;
+            _contextMenuVisible = false;
+        }
+
+        // Close modal
+        private void CloseAddUserModal()
+        {
+            _showAddUserModal = false;
+        }
+
+        // Confirm add user
+        private async Task ConfirmAddUser()
+        {
+            if (string.IsNullOrWhiteSpace(_newUserPhone))
+            {
+                _statusMessage = $"⚠️ Please enter a phone number.";
+                return;
+            }
+            _isAddNewUser = true;
+            try
+            {
+                await WhapiService.AddUserToGroupAsync(_selectedGroupName, _newUserPhone);
+                _statusMessage = $"✅ User {_newUserPhone} added to {_selectedGroupName}.";
+                await RefreshGroupsFromWhatsAppAsync();
+            }
+            catch (Exception ex)
+            {
+                _statusMessage = $"❌ Failed to add user: {ex.Message}";
+            }
+            finally
+            {
+                _showAddUserModal = false;
+            }
+        }
 
     }
 }

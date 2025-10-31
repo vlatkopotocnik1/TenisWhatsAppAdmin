@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 
 namespace WhatsAppAdmin.Services
@@ -195,6 +196,37 @@ namespace WhatsAppAdmin.Services
             // PUT /groups/{groupId}
             var response = await _http.PutAsJsonAsync($"/groups/{groupId}", payload);
             await EnsureSuccess(response);
+        }
+
+        public async Task AddUserToGroupAsync(string groupName, string phoneNumber)
+        {
+            var groups = await GetAllGroupsAsync();
+            var group = groups.FirstOrDefault(g => g.GetProperty("name").GetString() == groupName);
+
+            if (group.ValueKind == JsonValueKind.Undefined)
+                throw new Exception("Group not found");
+
+            var groupId = group.GetProperty("id").GetString();
+            if (string.IsNullOrEmpty(groupId))
+                throw new Exception("Invalid group ID");
+
+            // Format the request payload
+            var payload = new
+            {
+                participants = new[] { phoneNumber } // WhatsApp ID (e.g., "1234567890@c.us")
+            };
+
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // Correct API endpoint per the docs
+            var response = await _http.PostAsync($"/groups/{groupId}/participants", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var msg = await response.Content.ReadAsStringAsync();
+                throw new Exception($"API error: {msg}");
+            }
         }
 
 

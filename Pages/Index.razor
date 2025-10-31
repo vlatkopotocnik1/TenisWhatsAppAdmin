@@ -17,6 +17,26 @@
 }
 else
 {
+	@if (_whatsAppGroups.Count != 0)
+	{
+		<button class="btn-import btn-import-green"
+				@onclick="SyncGroupsOnWhatsApp"
+				disabled="@_isCreating">
+			<span class="btn-icon">🔄</span>
+			@(_isCreating ? "Syncing Groups…" : "Sync WhatsApp Groups")
+		</button>
+		<button class="btn-import btn-import-red"
+				@onclick="DeleteAllGroupsFromWhatsApp"
+				disabled="@_isDeleting">
+			<span class="btn-icon">🗑️</span>
+			@(_isDeleting ? "Deleting Groups…" : "Delete All WhatsApp Groups")
+		</button>
+		@if (!string.IsNullOrEmpty(_statusMessage))
+		{
+			<div class="import-status">@_statusMessage</div>
+		}
+	}
+
 	<div class="whatsAppGroups-board" @onclick="HideContextMenu">
 		@foreach (var whatsAppGroup in _whatsAppGroups)
 		{
@@ -86,26 +106,6 @@ else
 		}
 	</div>
 
-	@if (_whatsAppGroups.Count != 0)
-	{
-		<button class="btn-import btn-import-green"
-				@onclick="SyncGroupsOnWhatsApp"
-				disabled="@_isCreating">
-			<span class="btn-icon">🔄</span>
-			@(_isCreating ? "Syncing Groups…" : "Sync WhatsApp Groups")
-		</button>
-		<button class="btn-import btn-import-red"
-				@onclick="DeleteAllGroupsFromWhatsApp"
-				disabled="@_isDeleting">
-			<span class="btn-icon">🗑️</span>
-			@(_isDeleting ? "Deleting Groups…" : "Delete All WhatsApp Groups")
-		</button>
-		@if (!string.IsNullOrEmpty(_statusMessage))
-		{
-			<div class="import-status">@_statusMessage</div>
-		}
-	}
-
 	@if (_contextMenuVisible)
 	{
 		<div class="context-menu"
@@ -120,6 +120,9 @@ else
 		                    min-width:160px;">
 			<div class="context-item" @onclick="() => BeginRenameGroup(_contextGroupName)">
 				✏️ Rename Group
+			</div>
+			<div class="context-item" @onclick="() => ShowAddUserModal(_contextGroupName)">
+				➕ Add User
 			</div>
 			<div class="context-item" @onclick="() => ConfirmDeleteGroup(_contextGroupName)">
 				🗑️ Delete Group
@@ -146,6 +149,30 @@ else
 						else
 						{
 							<span>Rename</span>
+						}
+					</button>
+				</div>
+			</div>
+		</div>
+	}
+	@if (_showAddUserModal)
+	{
+		<div class="modal-backdrop" @onclick="CloseRenameDialog" style="position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000;">
+			<div class="rename-modal" style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; padding:18px; border-radius:8px; box-shadow:0 6px 24px rgba(0,0,0,0.25); z-index:10001;" @onclick:stopPropagation>
+				<div style="font-weight:700; margin-bottom:8px;">Add user</div>
+				<div style="margin-bottom:12px;">
+					<input @bind="_newUserPhone" class="form-control" placeholder="Phone" style="width:360px; max-width:80vw; padding:8px; border-radius:6px; border:1px solid #ddd;" />
+				</div>
+				<div style="display:flex; gap:8px; justify-content:flex-end;">
+					<button class="btn btn-secondary" @onclick ="CloseAddUserModal" disabled="@_isAddNewUser">Cancel</button>
+					<button class="btn btn-primary" @onclick="ConfirmAddUser" disabled="@(_isAddNewUser || string.IsNullOrWhiteSpace(_newUserPhone))">
+						@if (_isAddNewUser)
+						{
+							<span>⟳ Adding new user…</span>
+						}
+						else
+						{
+							<span>Add new user</span>
 						}
 					</button>
 				</div>

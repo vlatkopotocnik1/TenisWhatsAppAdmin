@@ -20,6 +20,7 @@
 /* --- Header --- */
 .whatsAppGroup-header {
     color: #fff;
+    border-radius: 10px 10px 0px 0px;
     font-weight: bold;
     text-transform: uppercase;
     padding: 10px 14px;
@@ -153,7 +154,7 @@
 }
 
 /* --- Badge Hover --- */
-.group-status-badge:hover {
+.whatsAppGroup-header:hover {
     transform: translateY(-1px);
     filter: brightness(1.1);
 }
@@ -356,3 +357,15 @@
     background: #e8e8e8;
     color: #333;
 }
+
+.field {
+    margin-bottom: 10px;
+}
+
+    .field label {
+        display: block;
+        font-size: 13px;
+        color: #333;
+        margin-bottom: 4px;
+    }
+

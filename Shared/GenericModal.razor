@@ -1,0 +1,131 @@
+﻿@namespace WhatsAppAdmin.Shared
+
+@if (Visible)
+{
+    <div class="modal-backdrop"
+         @onclick="HandleBackdropClick"
+         style="position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000;">
+        <div class="modal-container"
+             style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+                        background:#fff; padding:20px; border-radius:10px;
+                        box-shadow:0 6px 24px rgba(0,0,0,0.25); width:400px; max-width:90vw;"
+             @onclick:stopPropagation>
+            <div class="modal-title" style="font-weight:700; margin-bottom:12px;">
+                @Title
+            </div>
+
+            <EditForm Model="this" OnValidSubmit="ConfirmAction">
+                <div class="modal-body" style="margin-bottom:16px;">
+                    @foreach (var field in Fields)
+                    {
+                        <div style="margin-bottom:12px;">
+                            @switch (field.Type.ToLower())
+                            {
+                                case "textarea":
+                                    <textarea @bind="field.Value"
+                                              placeholder="@field.Placeholder"
+                                              class="form-control"
+                                              style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; min-height:80px;">
+                                                    </textarea>
+                                    break;
+
+                                case "checkbox":
+                                    <label style="display:flex; align-items:center; gap:8px;">
+                                        <input type="checkbox" @bind="field.BoolValue" />
+                                        @field.Placeholder
+                                    </label>
+                                    break;
+
+                                case "select":
+                                    <select @bind="field.Value"
+                                            class="form-control"
+                                            style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+                                        @foreach (var opt in field.Options)
+                                        {
+                                            <option value="@opt">@opt</option>
+                                        }
+                                    </select>
+                                    break;
+
+                                default:
+                                    <input @bind="field.Value"
+                                           placeholder="@field.Placeholder"
+                                           type="@field.Type"
+                                           class="form-control"
+                                           style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" />
+                                    break;
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelAction" disabled="@IsBusy">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" disabled="@IsBusy">
+                        @if (IsBusy)
+                        {
+                            <span>⟳ @ConfirmButtonText…</span>
+                        }
+                        else
+                        {
+                            <span>@ConfirmButtonText</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    // ====== PARAMETERS ======
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string ConfirmButtonText { get; set; } = "Confirm";
+    [Parameter] public List<ModalField> Fields { get; set; } = new();
+    [Parameter] public EventCallback<List<ModalField>> OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    [Parameter] public bool IsBusy { get; set; }
+
+    // ====== FIELD CLASS ======
+    public class ModalField
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Placeholder { get; set; } = string.Empty;
+        public string Type { get; set; } = "text"; // text, textarea, checkbox, select
+        public string Value { get; set; } = string.Empty;
+        public bool BoolValue { get; set; } = false;
+        public List<string> Options { get; set; } = new();
+    }
+
+    // ====== INTERNAL METHODS ======
+    private async Task CancelAction()
+    {
+        await OnCancel.InvokeAsync();
+        await CloseAsync();
+    }
+
+    private async Task ConfirmAction()
+    {
+        await OnConfirm.InvokeAsync(Fields);
+        await CloseAsync();
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        await OnCancel.InvokeAsync();
+        await CloseAsync();
+    }
+
+    private async Task CloseAsync()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+        StateHasChanged();
+    }
+}
