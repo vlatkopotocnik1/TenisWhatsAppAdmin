@@ -61,15 +61,6 @@ a, .btn-link {
         content: "An error has occurred."
     }
 
-/* Wrapper to isolate the toolbar from Bootstrap navbar flex behavior */
-.import-toolbar-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 20px 10px;
-    width: 100%;
-}
 /* Sidebar Layout */
 .sidebar {
     display: flex;
@@ -80,8 +71,8 @@ a, .btn-link {
     padding: 15px;
 }
 
-/* Ensure ImportToolbar is full width within sidebar */
-.import-toolbar {
+/* Ensure Toolbar is full width within sidebar */
+.toolbar {
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -89,7 +80,7 @@ a, .btn-link {
 }
 
     /* Make buttons full width (optional for cleaner sidebar look) */
-    .import-toolbar .btn-import {
+    .toolbar .btn-import {
         font-size: small;
         width: 100%;
         max-width: 220px; /* optional limit */

@@ -30,6 +30,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 10px;
+    cursor: grab;
 }
 
 
@@ -293,7 +294,6 @@
     }
 
     .whatsAppGroup-grid {
-        grid-template-columns: 1fr 50px 50px 50px 50px;
         font-size: 0.9rem;
     }
 
