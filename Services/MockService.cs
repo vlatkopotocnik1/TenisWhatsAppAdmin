@@ -13,57 +13,57 @@ namespace WhatsAppAdmin.Services
             // seed mock data
             _whatsAppGroups = new List<WhatsAppGroup>
 {
-new WhatsAppGroup { Id = "1", Name = "WhatsAppGroup 1", Users = new List<Users>
+new WhatsAppGroup { Id = "1", Name = "WhatsAppGroup 1", Users = new List<User>
 {
-new Users { Name = "Marko Novak", Rating = 1600, PhoneNumber = "0123456789" },
-new Users { Name = "Ana Kostic", Rating = 1580, PhoneNumber = "0123456789"  },
-new Users { Name = "Ivan Horvat", Rating = 1560, PhoneNumber = "0123456789"  },
-new Users { Name = "Petra Ristic", Rating = 1540, PhoneNumber = "0123456789"  },
+new User { Name = "Marko Novak", Rating = 1600, PhoneNumber = "0123456789" },
+new User { Name = "Ana Kostic", Rating = 1580, PhoneNumber = "0123456789"  },
+new User { Name = "Ivan Horvat", Rating = 1560, PhoneNumber = "0123456789"  },
+new User { Name = "Petra Ristic", Rating = 1540, PhoneNumber = "0123456789"  },
 }},
 
 
-new WhatsAppGroup { Id = "2a", Name = "WhatsAppGroup 2A", Users = new List<Users>
+new WhatsAppGroup { Id = "2a", Name = "WhatsAppGroup 2A", Users = new List<User>
 {
-new Users { Name = "Luka Peric", Rating = 1500, PhoneNumber = "0123456789"  },
-new Users { Name = "Maja Kovac", Rating = 1490, PhoneNumber = "0123456789"  },
-new Users { Name = "Tina Jovanovic", Rating = 1480, PhoneNumber = "0123456789"  },
-new Users { Name = "Goran Sopic", Rating = 1470, PhoneNumber = "0123456789"  },
+new User { Name = "Luka Peric", Rating = 1500, PhoneNumber = "0123456789"  },
+new User { Name = "Maja Kovac", Rating = 1490, PhoneNumber = "0123456789"  },
+new User { Name = "Tina Jovanovic", Rating = 1480, PhoneNumber = "0123456789"  },
+new User { Name = "Goran Sopic", Rating = 1470, PhoneNumber = "0123456789"  },
 }},
 
 
-new WhatsAppGroup { Id = "2b", Name = "WhatsAppGroup 2B", Users = new List<Users>
+new WhatsAppGroup { Id = "2b", Name = "WhatsAppGroup 2B", Users = new List<User>
 {
-new Users { Name = "Dario Marin", Rating = 1460, PhoneNumber = "0123456789"  },
-new Users { Name = "Katarina Zec", Rating = 1450, PhoneNumber = "0123456789"  },
-new Users { Name = "Neven Kralj", Rating = 1440, PhoneNumber = "0123456789"  },
-new Users { Name = "Sara Filipovic", Rating = 1430, PhoneNumber = "0123456789"  },
+new User { Name = "Dario Marin", Rating = 1460, PhoneNumber = "0123456789"  },
+new User { Name = "Katarina Zec", Rating = 1450, PhoneNumber = "0123456789"  },
+new User { Name = "Neven Kralj", Rating = 1440, PhoneNumber = "0123456789"  },
+new User { Name = "Sara Filipovic", Rating = 1430, PhoneNumber = "0123456789"  },
 }},
 
 
-new WhatsAppGroup { Id = "3a", Name = "WhatsAppGroup 3A", Users = new List<Users>
+new WhatsAppGroup { Id = "3a", Name = "WhatsAppGroup 3A", Users = new List<User>
 {
-new Users { Name = "Matej Suster", Rating = 1400, PhoneNumber = "0123456789"  },
-new Users { Name = "Ivana Perkovic", Rating = 1390, PhoneNumber = "0123456789"  },
-new Users { Name = "Bruno Zoric", Rating = 1380, PhoneNumber = "0123456789"  },
-new Users { Name = "Lea Novak", Rating = 1370, PhoneNumber = "0123456789"  },
+new User { Name = "Matej Suster", Rating = 1400, PhoneNumber = "0123456789"  },
+new User { Name = "Ivana Perkovic", Rating = 1390, PhoneNumber = "0123456789"  },
+new User { Name = "Bruno Zoric", Rating = 1380, PhoneNumber = "0123456789"  },
+new User { Name = "Lea Novak", Rating = 1370, PhoneNumber = "0123456789"  },
 }},
 
 
-new WhatsAppGroup { Id = "3b", Name = "WhatsAppGroup 3B", Users = new List<Users>
+new WhatsAppGroup { Id = "3b", Name = "WhatsAppGroup 3B", Users = new List<User>
 {
-new Users { Name = "Domagoj Vuk", Rating = 1360, PhoneNumber = "0123456789"  },
-new Users { Name = "Nina Maric", Rating = 1350, PhoneNumber = "0123456789"  },
-new Users { Name = "Kristijan Leko", Rating = 1340, PhoneNumber = "0123456789"  },
-new Users { Name = "Marija Balen", Rating = 1330, PhoneNumber = "0123456789"  },
+new User { Name = "Domagoj Vuk", Rating = 1360, PhoneNumber = "0123456789"  },
+new User { Name = "Nina Maric", Rating = 1350, PhoneNumber = "0123456789"  },
+new User { Name = "Kristijan Leko", Rating = 1340, PhoneNumber = "0123456789"  },
+new User { Name = "Marija Balen", Rating = 1330, PhoneNumber = "0123456789"  },
 }},
 
 
-new WhatsAppGroup { Id = "3c", Name = "WhatsAppGroup 3C", Users = new List<Users>
+new WhatsAppGroup { Id = "3c", Name = "WhatsAppGroup 3C", Users = new List<User>
 {
-new Users { Name = "Filip Grubic", Rating = 1320, PhoneNumber = "0123456789"  },
-new Users { Name = "Ivona Basic", Rating = 1310, PhoneNumber = "0123456789"  },
-new Users { Name = "Zoran Dedic", Rating = 1300, PhoneNumber = "0123456789"  },
-new Users { Name = "Ema Novak", Rating = 1290, PhoneNumber = "0123456789"  },
+new User { Name = "Filip Grubic", Rating = 1320, PhoneNumber = "0123456789"  },
+new User { Name = "Ivona Basic", Rating = 1310, PhoneNumber = "0123456789"  },
+new User { Name = "Zoran Dedic", Rating = 1300, PhoneNumber = "0123456789"  },
+new User { Name = "Ema Novak", Rating = 1290, PhoneNumber = "0123456789"  },
 }},
 };
         }
@@ -74,7 +74,7 @@ new Users { Name = "Ema Novak", Rating = 1290, PhoneNumber = "0123456789"  },
             {
                 Id = l.Id,
                 Name = l.Name,
-                Users = l.Users.Select(p => new Users { Id = p.Id, Name = p.Name, Rating = p.Rating, Notes = p.Notes, PhoneNumber = p.PhoneNumber }).ToList()
+                Users = l.Users.Select(p => new User { Id = p.Id, Name = p.Name, Rating = p.Rating, Notes = p.Notes, PhoneNumber = p.PhoneNumber }).ToList()
             }).ToList();
 
 
@@ -103,7 +103,7 @@ new Users { Name = "Ema Novak", Rating = 1290, PhoneNumber = "0123456789"  },
             {
                 Id = l.Id,
                 Name = l.Name,
-                Users = l.Users.Select(p => new Users { Id = p.Id, Name = p.Name, Rating = p.Rating, Notes = p.Notes, PhoneNumber = p.PhoneNumber }).ToList()
+                Users = l.Users.Select(p => new User { Id = p.Id, Name = p.Name, Rating = p.Rating, Notes = p.Notes, PhoneNumber = p.PhoneNumber }).ToList()
             }).ToList());
         }
 
@@ -118,7 +118,7 @@ new Users { Name = "Ema Novak", Rating = 1290, PhoneNumber = "0123456789"  },
                 {
                     Id = l.Id,
                     Name = l.Name,
-                    Users = l.Users.Select(p => new Users { Id = p.Id, Name = p.Name, Rating = p.Rating, Notes = p.Notes, PhoneNumber = p.PhoneNumber }).ToList()
+                    Users = l.Users.Select(p => new User { Id = p.Id, Name = p.Name, Rating = p.Rating, Notes = p.Notes, PhoneNumber = p.PhoneNumber }).ToList()
                 });
             }
 
@@ -127,7 +127,7 @@ new Users { Name = "Ema Novak", Rating = 1290, PhoneNumber = "0123456789"  },
             {
                 Id = l.Id,
                 Name = l.Name,
-                Users = l.Users.Select(p => new Users { Id = p.Id, Name = p.Name, Rating = p.Rating, Notes = p.Notes, PhoneNumber = p.PhoneNumber }).ToList()
+                Users = l.Users.Select(p => new User { Id = p.Id, Name = p.Name, Rating = p.Rating, Notes = p.Notes, PhoneNumber = p.PhoneNumber }).ToList()
             }).ToList());
         }
     }

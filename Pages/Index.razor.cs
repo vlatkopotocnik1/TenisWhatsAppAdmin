@@ -20,14 +20,14 @@ namespace WhatsAppAdmin.Pages
         private bool _contextMenuVisible, _contextUserMenuVisible;
         private string _contextMenuX = "0px", _contextMenuY = "0px";
         private string _contextUserMenuX = "0px", _contextUserMenuY = "0px";
-        private string? _contextGroupName, _contextUserName;
+        private string _contextGroupName = String.Empty, _contextUserName = String.Empty;
 
         // Modal system
         private bool _modalVisible;
         private string _modalTitle = "";
         private string? _modalBodyText;
-        private List<GenericModal.GenericField>? _modalFields;
-        private List<GenericModal.GenericButton>? _modalButtons;
+        private List<PromptDialog.GenericField>? _modalFields;
+        private List<PromptDialog.GenericButton>? _modalButtons;
 
         protected override async Task OnInitializedAsync()
         {
@@ -49,7 +49,7 @@ namespace WhatsAppAdmin.Pages
                 {
                     Id = ig.Id ?? Guid.NewGuid().ToString(),
                     Name = ig.Name ?? string.Empty,
-                    Users = ig.Users.Select(u => new Users
+                    Users = ig.Users.Select(u => new User
                     {
                         Id = u.Id == Guid.Empty ? Guid.NewGuid() : u.Id,
                         Name = u.Name ?? string.Empty,
@@ -83,7 +83,7 @@ namespace WhatsAppAdmin.Pages
             {
                 var name = g.GetProperty("name").GetString() ?? "Unnamed";
                 var id = g.GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
-                var users = new List<Users>();
+                var users = new List<User>();
                 if (g.TryGetProperty("participants", out var p) && p.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var user in p.EnumerateArray())
@@ -103,7 +103,7 @@ namespace WhatsAppAdmin.Pages
 
                         if (!string.IsNullOrWhiteSpace(phone))
                         {
-                            users.Add(new Users
+                            users.Add(new User
                             {
                                 Id = Guid.NewGuid(),
                                 Name = phone,
@@ -197,24 +197,6 @@ namespace WhatsAppAdmin.Pages
         private static string NormalizePhone(string phone) =>
             phone.Replace("+", "").Replace("@c.us", "").Trim();
 
-        private void ShowContextMenu(MouseEventArgs e, string name)
-        {
-            _contextMenuVisible = true;
-            _contextUserMenuVisible = false;
-            _contextMenuX = $"{e.ClientX}px";
-            _contextMenuY = $"{e.ClientY}px";
-            _contextGroupName = name;
-        }
-
-        private void ShowUserContextMenu(MouseEventArgs e, string name)
-        {
-            _contextUserMenuVisible = true;
-            _contextMenuVisible = false;
-            _contextUserMenuX = $"{e.ClientX}px";
-            _contextUserMenuY = $"{e.ClientY}px";
-            _contextUserName = name;
-        }
-
         private void HideContextMenu()
         {
             _contextMenuVisible = _contextUserMenuVisible = false;
@@ -222,7 +204,7 @@ namespace WhatsAppAdmin.Pages
         }
 
         // 🔹 Generic modal helper
-        private void ShowModal(string title, string? body, List<GenericModal.GenericField>? fields, List<GenericModal.GenericButton> buttons)
+        private void ShowModal(string title, string? body, List<PromptDialog.GenericField>? fields, List<PromptDialog.GenericButton> buttons)
         {
             _modalTitle = title;
             _modalBodyText = body;
@@ -232,7 +214,7 @@ namespace WhatsAppAdmin.Pages
         }
 
         // 📝 Rename Group
-        private void BeginRenameGroup(string groupName)
+        private void ConfirmRenameGroup(string groupName)
         {
             _contextMenuVisible = false;
             ShowModal(
@@ -242,20 +224,29 @@ namespace WhatsAppAdmin.Pages
                 new()
                 {
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Rename", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create<List<GenericModal.GenericField>?>(this, async fields =>
+                    new() { Text = "Rename", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async fields =>
                         {
                             var newName = fields?.FirstOrDefault(f => f.Name=="newName")?.Value;
                             if (!string.IsNullOrWhiteSpace(newName))
-                                await ConfirmRenameGroup(groupName, newName);
+                                await RenameGroup(groupName, newName);
                         })
                     }
                 });
         }
 
-        private async Task ConfirmRenameGroup(string oldName, string newName)
+        private async Task RenameGroup(string oldName, string newName)
         {
             var group = _whatsAppGroups.FirstOrDefault(g => g.Name == oldName);
             if (group == null) return;
+
+            // If group is only local, just rename in memory
+            if (group.IsNew)
+            {
+                group.Name = newName;
+                await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName}", "info");
+                return;
+            }
+
             await WhapiService.UpdateGroupAsync(group.Id, newName);
             group.Name = newName;          
             await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName}", "success");
@@ -263,7 +254,7 @@ namespace WhatsAppAdmin.Pages
         }
 
         // ➕ Add User
-        private void ShowAddUserModal(string groupName)
+        private void ConfirmAddUser(string groupName)
         {
             _contextMenuVisible = false;
             ShowModal(
@@ -273,7 +264,7 @@ namespace WhatsAppAdmin.Pages
                 new()
                 {
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Add", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create<List<GenericModal.GenericField>?>(this, async fields =>
+                    new() { Text = "Add", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async fields =>
                         {
                             var phone = fields?.FirstOrDefault(f => f.Name=="phone")?.Value;
                             if (!string.IsNullOrWhiteSpace(phone))
@@ -285,6 +276,24 @@ namespace WhatsAppAdmin.Pages
 
         private async Task AddUserToGroup(string groupName, string phone)
         {
+            var group = _whatsAppGroups.FirstOrDefault(g => g.Name == groupName);
+            if (group == null) return;
+
+            // Create user object
+            var newUser = new User
+            {
+                Name = phone, 
+                PhoneNumber = phone
+            };
+
+            // If group is new (local only), just update the model
+            if (group.IsNew)
+            {
+                group.Users.Add(newUser);
+                await JS.InvokeVoidAsync("showToast", $"✅ Added {phone} to {groupName} (local only)", "info");
+                return;
+            }
+
             await WhapiService.AddUserToGroupAsync(groupName, phone);
             await JS.InvokeVoidAsync("showToast", $"✅ User {phone} added to {groupName}", "success");
             await RefreshGroupsFromWhatsAppAsync();
@@ -297,20 +306,28 @@ namespace WhatsAppAdmin.Pages
             _contextMenuVisible = false;
             ShowModal(
                 "Delete WhatsApp Group",
-                $"Are you sure you want to permanently delete <strong>{groupName}</strong>?",
+                $"Are you sure you want to delete <strong>{groupName}</strong>?",
                 null,
                 new()
                 {
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<GenericModal.GenericField>?>(this, async _ => await DeleteGroup(groupName)) }
+                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteGroup(groupName)) }
                 });
         }
 
         private async Task DeleteGroup(string groupName)
         {
-            var g = _whatsAppGroups.FirstOrDefault(x => x.Name == groupName);
-            if (g == null) return;
-            await WhapiService.SafeDeleteGroupAsync(g.Id);
+            var group = _whatsAppGroups.FirstOrDefault(x => x.Name == groupName);
+            if (group == null) return;
+
+            if (group.IsNew)
+            {
+                _whatsAppGroups.Remove(group);
+                await JS.InvokeVoidAsync("showToast", $"✅ Group '{groupName}' removed", "info");
+                return;
+            }
+
+            await WhapiService.SafeDeleteGroupAsync(group.Id);
             await RefreshGroupsFromWhatsAppAsync();
             await JS.InvokeVoidAsync("showToast", $"✅ Deleted '{groupName}'", "success");
         }
@@ -322,12 +339,12 @@ namespace WhatsAppAdmin.Pages
             _contextUserMenuVisible = false;
             ShowModal(
                 "Delete User",
-                $"Are you sure you want to permanently delete <strong>{userName}</strong>?",
+                $"Are you sure you want to delete <strong>{userName}</strong>?",
                 null,
                 new()
                 {
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<GenericModal.GenericField>?>(this, async _ => await DeleteUser(userName)) }
+                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteUser(userName)) }
                 });
         }
 
@@ -335,8 +352,28 @@ namespace WhatsAppAdmin.Pages
         {
             var group = _whatsAppGroups.FirstOrDefault(g => g.Users.Any(u => u.Name == userName));
             if (group == null) return;
-            var user = group.Users.First(u => u.Name == userName);
-            await WhapiService.RemoveParticipantsAsync(group.Id, new[] { user.PhoneNumber });
+
+            // Check if user is only in "ToAdd" (not yet on WhatsApp)
+            var userInToAdd = group.ToAdd.FirstOrDefault(u => u.Name == userName);
+            if (userInToAdd != null)
+            {
+                group.ToAdd.Remove(userInToAdd);
+                await JS.InvokeVoidAsync("showToast", $"✅ User {userName} removed", "info");
+                return;
+            }
+
+            var user = group.Users.FirstOrDefault(u => u.Name == userName);
+            if (user == null) return;
+
+            // If group not yet created on WhatsApp, just remove locally
+            if (group.IsNew)
+            {
+                group.Users.Remove(user);
+                await JS.InvokeVoidAsync("showToast", $"✅ User {userName} removed", "info");
+                return;
+            }
+
+            await WhapiService.RemoveParticipantsAsync(group.Id, [user.PhoneNumber]);
             group.Users.Remove(user);
             await JS.InvokeVoidAsync("showToast", $"✅ User {userName} removed", "success");
         }
@@ -455,8 +492,8 @@ namespace WhatsAppAdmin.Pages
             {
                 _contextMenuVisible = true;
                 _contextUserMenuVisible = false;
-                _contextMenuX = $"{e.ClientX}px";
-                _contextMenuY = $"{e.ClientY}px";
+                _contextMenuX = $"{e.ClientX - 40}px";
+                _contextMenuY = $"{e.ClientY + 12}px";
                 _contextGroupName = name;
             }
             StateHasChanged();
@@ -472,8 +509,8 @@ namespace WhatsAppAdmin.Pages
             {
                 _contextUserMenuVisible = true;
                 _contextMenuVisible = false;
-                _contextUserMenuX = $"{e.ClientX}px";
-                _contextUserMenuY = $"{e.ClientY}px";
+                _contextUserMenuX = $"{e.ClientX - 40}px";
+                _contextUserMenuY = $"{e.ClientY + 12}px";
                 _contextUserName = name;
             }
             StateHasChanged();

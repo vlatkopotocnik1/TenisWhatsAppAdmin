@@ -4,10 +4,10 @@
     {
         public string Id { get; set; } = string.Empty; // e.g. "1", "2a"
         public string Name { get; set; } = string.Empty;
-        public List<Users> Users { get; set; } = new List<Users>();
+        public List<User> Users { get; set; } = new List<User>();
 
         public bool IsNew { get; set; } = false;
-        public List<Users> ToAdd { get; set; } = new();
-        public List<Users> ToRemove { get; set; } = new();
+        public List<User> ToAdd { get; set; } = new();
+        public List<User> ToRemove { get; set; } = new();
     }
 }

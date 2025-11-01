@@ -23,7 +23,6 @@
 </div>
 
 @code {
-    private bool isWorking = false;
 
     // CSV parsing config - semicolon separated like your sample
     private readonly CsvConfiguration _csvConfig = new(CultureInfo.InvariantCulture)
@@ -40,7 +39,6 @@
         var file = e.File;
         if (file == null) return;
 
-        isWorking = true;
         StateHasChanged();
         var groups = new List<WhatsAppGroup>();
         try
@@ -65,7 +63,6 @@
         }
         finally
         {
-            isWorking = false;
             StateHasChanged();
             await JS.InvokeVoidAsync("showToast", $"Imported {groups.Sum(g => g.Users.Count)} rows into {groups.Count} groups.", "success");
         }
@@ -73,7 +70,6 @@
 
     private async Task ImportFromService()
     {
-        isWorking = true;
 
         StateHasChanged();
 
@@ -94,12 +90,12 @@
             {
                 Id = g.Id ?? Guid.NewGuid().ToString(),
                 Name = g.Name ?? string.Empty,
-                Users = g.Users?.Select(u => new Users
+                Users = g.Users?.Select(u => new User
                 {
                     Id = u.Id,
                     Name = u.Name,
                     PhoneNumber = u.PhoneNumber ?? string.Empty   // store phone in Rating field of DTO (or adjust DTO)
-                }).ToList() ?? new List<Users>()
+                }).ToList() ?? new List<User>()
             }).ToList();
 
             // Push into ImportStateService so Index page will pick it up
@@ -112,7 +108,6 @@
         finally
         {
             await JS.InvokeVoidAsync("showToast", "Imported from service", "success");
-            isWorking = false;
             StateHasChanged();
         }
     }
@@ -146,7 +141,7 @@
                 groups.Add(group);
             }
 
-            group.Users.Add(new Users
+            group.Users.Add(new User
             {
                 Name = playerName,
                 PhoneNumber = phone

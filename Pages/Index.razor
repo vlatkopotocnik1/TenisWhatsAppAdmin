@@ -90,8 +90,8 @@ else
 	@if (_contextMenuVisible)
 	{
 		<div class="context-menu" style="@($"top:{_contextMenuY}; left:{_contextMenuX};")">
-			<div class="context-item" @onclick="() => ShowAddUserModal(_contextGroupName)">➕ Add User</div>
-			<div class="context-item" @onclick="() => BeginRenameGroup(_contextGroupName)">🖊️ Rename Group</div>
+			<div class="context-item" @onclick="() => ConfirmAddUser(_contextGroupName)">➕ Add User</div>
+			<div class="context-item" @onclick="() => ConfirmRenameGroup(_contextGroupName)">🖊️ Rename Group</div>
 			<div class="context-item" @onclick="() => ConfirmDeleteGroup(_contextGroupName)">🗑️ Delete Group</div>
 		</div>
 	}
@@ -104,7 +104,7 @@ else
 	}
 }
 
-<GenericModal Visible="@_modalVisible"
+<PromptDialog Visible="@_modalVisible"
 			  VisibleChanged="@((bool v) => _modalVisible = v)"
 			  Title="@_modalTitle"
 			  BodyText="@_modalBodyText"
