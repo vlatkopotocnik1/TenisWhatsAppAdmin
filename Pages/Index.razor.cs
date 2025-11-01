@@ -14,7 +14,7 @@ namespace WhatsAppAdmin.Pages
         [Inject] private IJSRuntime JS { get; set; } = default!;
         [Inject] private WhapiService WhapiService { get; set; } = default!;
 
-        private List<WhatsAppGroup> _whatsAppGroups = new();
+        private List<WhatsAppGroup> _whatsAppGroups = [];
         private bool _loading = true, _isCreating, _isDeleting;
 
         private bool _contextMenuVisible, _contextUserMenuVisible;
@@ -40,7 +40,7 @@ namespace WhatsAppAdmin.Pages
             GlobalEvents.OnHideContextMenu += HideContextMenu;
             _loading = false;
         }
-        private List<WhatsAppGroup> ConvertImportedToWhatsAppGroups(IEnumerable<WhatsAppGroup> imported)
+        private static List<WhatsAppGroup> ConvertImportedToWhatsAppGroups(IEnumerable<WhatsAppGroup> imported)
         {
             var outList = new List<WhatsAppGroup>();
             foreach (var ig in imported)
@@ -49,14 +49,14 @@ namespace WhatsAppAdmin.Pages
                 {
                     Id = ig.Id ?? Guid.NewGuid().ToString(),
                     Name = ig.Name ?? string.Empty,
-                    Users = ig.Users.Select(u => new User
+                    Users = [.. ig.Users.Select(u => new User
                     {
                         Id = u.Id == Guid.Empty ? Guid.NewGuid() : u.Id,
                         Name = u.Name ?? string.Empty,
                         Rating = 0,
                         Notes = string.Empty,
                         PhoneNumber = u.PhoneNumber ?? string.Empty
-                    }).ToList()
+                    })]
                 };
                 outList.Add(wg);
             }
@@ -81,10 +81,10 @@ namespace WhatsAppAdmin.Pages
             var result = new List<WhatsAppGroup>();
             foreach (var g in apiGroups)
             {
-                var name = g.GetProperty("name").GetString() ?? "Unnamed";
+                var name = g.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String ? nameEl.GetString() ?? "Unnamed" : _whatsAppGroups.FirstOrDefault(x => x.Id == g.GetProperty("id").GetString())?.Name ?? "Unnamed"; 
                 var id = g.GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
                 var users = new List<User>();
-                if (g.TryGetProperty("participants", out var p) && p.ValueKind == JsonValueKind.Array)
+                if (g.TryGetProperty("participants", out var p) && p.ValueKind == JsonValueKind.Array && p.GetArrayLength() > 0)
                 {
                     foreach (var user in p.EnumerateArray())
                     {
@@ -95,22 +95,27 @@ namespace WhatsAppAdmin.Pages
                             phone = user.GetString();
                         }
                         else if (user.ValueKind == JsonValueKind.Object &&
-                                 user.TryGetProperty("id", out var idEl) &&
-                                 idEl.ValueKind == JsonValueKind.String)
+                                 user.TryGetProperty("id", out var idUser) &&
+                                 idUser.ValueKind == JsonValueKind.String)
                         {
-                            phone = idEl.GetString();
+                            phone = idUser.GetString();
                         }
 
                         if (!string.IsNullOrWhiteSpace(phone))
                         {
                             users.Add(new User
                             {
-                                Id = Guid.NewGuid(),
                                 Name = phone,
                                 PhoneNumber = phone
                             });
                         }
                     }
+                }
+                else
+                {
+                    var existingGroup = _whatsAppGroups.FirstOrDefault(x => x.Id == id || x.Name == name);
+                    if (existingGroup != null)
+                        users = existingGroup.Users;
                 }
                 result.Add(new WhatsAppGroup { Id = id, Name = name, Users = users });
             }
@@ -187,10 +192,10 @@ namespace WhatsAppAdmin.Pages
             return result;
         }
 
-        private string GetGroupStatus(WhatsAppGroup g)
+        private static string GetGroupStatus(WhatsAppGroup g)
         {
             if (g.IsNew) return "new";
-            if (g.ToAdd.Any() || g.ToRemove.Any()) return "changed";
+            if (g.ToAdd.Count != 0 || g.ToRemove.Count != 0) return "changed";
             return "unchanged";
         }
 
@@ -200,7 +205,7 @@ namespace WhatsAppAdmin.Pages
         private void HideContextMenu()
         {
             _contextMenuVisible = _contextUserMenuVisible = false;
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         }
 
         // 🔹 Generic modal helper
@@ -220,9 +225,8 @@ namespace WhatsAppAdmin.Pages
             ShowModal(
                 "Rename group",
                 null,
-                new() { new() { Name = "newName", Placeholder = "New group name", Value = groupName } },
-                new()
-                {
+                [new() { Name = "newName", Placeholder = "New group name", Value = groupName }],
+                [
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
                     new() { Text = "Rename", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async fields =>
                         {
@@ -231,7 +235,7 @@ namespace WhatsAppAdmin.Pages
                                 await RenameGroup(groupName, newName);
                         })
                     }
-                });
+                ]);
         }
 
         private async Task RenameGroup(string oldName, string newName)
@@ -248,7 +252,8 @@ namespace WhatsAppAdmin.Pages
             }
 
             await WhapiService.UpdateGroupAsync(group.Id, newName);
-            group.Name = newName;          
+            group.Name = newName;
+            await Task.Delay(1000);
             await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName}", "success");
             await RefreshGroupsFromWhatsAppAsync();
         }
@@ -260,9 +265,8 @@ namespace WhatsAppAdmin.Pages
             ShowModal(
                 "Add user",
                 null,
-                new() { new() { Name = "phone", Placeholder = "Phone" } },
-                new()
-                {
+                [new() { Name = "phone", Placeholder = "Phone" }],
+                [
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
                     new() { Text = "Add", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async fields =>
                         {
@@ -271,7 +275,7 @@ namespace WhatsAppAdmin.Pages
                                 await AddUserToGroup(groupName, phone);
                         })
                     }
-                });
+                ]);
         }
 
         private async Task AddUserToGroup(string groupName, string phone)
@@ -300,22 +304,21 @@ namespace WhatsAppAdmin.Pages
         }
 
         // 🗑️ Delete Group
-        private void ConfirmDeleteGroup(string? groupName)
+        private void ConfirmDeleteAllUsersFromGroup(string? groupName)
         {
             if (string.IsNullOrWhiteSpace(groupName)) return;
             _contextMenuVisible = false;
             ShowModal(
-                "Delete WhatsApp Group",
-                $"Are you sure you want to delete <strong>{groupName}</strong>?",
+                "Delete all users from WhatsApp group",
+                $"Are you sure you want to delete all users from <strong>{groupName}</strong>?",
                 null,
-                new()
-                {
+                [
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteGroup(groupName)) }
-                });
+                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteAllUsersFromGroup(groupName)) }
+                ]);
         }
 
-        private async Task DeleteGroup(string groupName)
+        private async Task DeleteAllUsersFromGroup(string groupName)
         {
             var group = _whatsAppGroups.FirstOrDefault(x => x.Name == groupName);
             if (group == null) return;
@@ -323,13 +326,13 @@ namespace WhatsAppAdmin.Pages
             if (group.IsNew)
             {
                 _whatsAppGroups.Remove(group);
-                await JS.InvokeVoidAsync("showToast", $"✅ Group '{groupName}' removed", "info");
+                await JS.InvokeVoidAsync("showToast", $"✅ Users from group '{groupName}' removed", "info");
                 return;
             }
 
             await WhapiService.SafeDeleteGroupAsync(group.Id);
             await RefreshGroupsFromWhatsAppAsync();
-            await JS.InvokeVoidAsync("showToast", $"✅ Deleted '{groupName}'", "success");
+            await JS.InvokeVoidAsync("showToast", $"✅ Users deleted from '{groupName}'", "success");
         }
 
         // 🗑️ Delete User
@@ -341,11 +344,10 @@ namespace WhatsAppAdmin.Pages
                 "Delete User",
                 $"Are you sure you want to delete <strong>{userName}</strong>?",
                 null,
-                new()
-                {
+                [
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
                     new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteUser(userName)) }
-                });
+                ]);
         }
 
         private async Task DeleteUser(string userName)
@@ -395,36 +397,33 @@ namespace WhatsAppAdmin.Pages
             {
                 foreach (var group in _whatsAppGroups)
                 {
-                    var isChanged = false;
                     if (group.IsNew)
                     {
                         // create group
                         var phones = group.Users.Select(u => u.PhoneNumber).ToList();
                         group.Id = await WhapiService.CreateGroupAsync(group.Name, phones);
                         await JS.InvokeVoidAsync("showToast", $"✅ Created new group '{group.Name}' → {group.Id}", "success");
-                        isChanged = true;
                     }
                     else
                     {
                         // update group
-                        if (group.ToAdd.Any())
+                        if (group.ToAdd.Count != 0)
                         {
                             await WhapiService.AddParticipantsAsync(group.Id, group.ToAdd.Select(u => u.PhoneNumber));
                             await JS.InvokeVoidAsync("showToast", $"✅ Added {group.ToAdd.Count} users to '{group.Name}'", "success");
-                            isChanged = true;
                         }
 
-                        if (group.ToRemove.Any())
+                        if (group.ToRemove.Count != 0)
                         {
                             await WhapiService.RemoveParticipantsAsync(group.Id, group.ToRemove.Select(u => u.PhoneNumber));
                             await JS.InvokeVoidAsync("showToast", $"⚠️ Removed {group.ToRemove.Count} users from '{group.Name}'", "error");
-                            isChanged = true;
                         }
-                    }
-                    if(isChanged) await Task.Delay(300); // gentle pacing
+                    }                   
                 }
-                await RefreshGroupsFromWhatsAppAsync();
+
+                await Task.Delay(1000);
                 await JS.InvokeVoidAsync("showToast", "✅ Sync complete.", "success");
+                await RefreshGroupsFromWhatsAppAsync();
             }
             catch (Exception ex)
             {

@@ -92,7 +92,7 @@ else
 		<div class="context-menu" style="@($"top:{_contextMenuY}; left:{_contextMenuX};")">
 			<div class="context-item" @onclick="() => ConfirmAddUser(_contextGroupName)">➕ Add User</div>
 			<div class="context-item" @onclick="() => ConfirmRenameGroup(_contextGroupName)">🖊️ Rename Group</div>
-			<div class="context-item" @onclick="() => ConfirmDeleteGroup(_contextGroupName)">🗑️ Delete Group</div>
+			<div class="context-item" @onclick="() => ConfirmDeleteAllUsersFromGroup(_contextGroupName)">🗑️ Delete All Users</div>
 		</div>
 	}
 
