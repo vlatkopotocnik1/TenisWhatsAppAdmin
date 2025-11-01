@@ -26,7 +26,7 @@ else
 		@foreach (var g in _whatsAppGroups)
 		{
 			<div class="whatsAppGroup-column">
-				<div class="whatsAppGroup-header" data-status="@GetGroupStatus(g)">
+				<div class="whatsAppGroup-header @( _contextGroupName == g.Name && _contextMenuVisible ? "menu-active" : "" )" data-status="@GetGroupStatus(g)">
 					<div class="group-header-left">@g.Name</div>
 					<div class="group-header-right">
 						@if (g.IsNew)
@@ -58,7 +58,8 @@ else
 					@foreach (var u in g.Users)
 					{
 						var isRemove = g.ToRemove.Any(r => NormalizePhone(r.PhoneNumber) == NormalizePhone(u.PhoneNumber));
-						<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row")" @onclick:stopPropagation>
+						<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row") user-row @( _contextUserName == u.Name && _contextUserMenuVisible ? "menu-active" : "" )"
+							 @onclick:stopPropagation>
 							<div class="user-main">
 								<span>@u.Name</span>
 								@if (u.Name != u.PhoneNumber)
