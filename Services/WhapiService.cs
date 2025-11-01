@@ -1,5 +1,4 @@
 ﻿using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 
 namespace WhatsAppAdmin.Services
@@ -12,11 +11,16 @@ namespace WhatsAppAdmin.Services
         private readonly string _apiKey;
         private const string BaseUrl = "https://gate.whapi.cloud";
 
+        private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = false,
+            PropertyNameCaseInsensitive = true
+        };
+
         public WhapiService(HttpClient http, IConfiguration cfg, ILogger<WhapiService> logger)
         {
             _http = http;
             _logger = logger;
-
             _apiKey = cfg["Whapi:ApiKey"]
                       ?? throw new InvalidOperationException("Whapi:ApiKey not configured.");
 
@@ -26,78 +30,66 @@ namespace WhatsAppAdmin.Services
 
         public async Task<List<JsonElement>> GetAllGroupsAsync()
         {
-            //// Remove when PROD
-            //return await Task.FromResult(new List<JsonElement>());
             var resp = await _http.GetAsync("/groups");
             await EnsureSuccess(resp);
 
-            var json = await resp.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
+            var stream = await resp.Content.ReadAsStreamAsync();
+            var root = await JsonSerializer.DeserializeAsync<JsonElement>(stream, JsonOpts);
 
-            var groups = new List<JsonElement>();
+            if (root.ValueKind == JsonValueKind.Array)
+                return root.EnumerateArray().Select(x => x.Clone()).ToList();
 
-            if (doc.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in doc.RootElement.EnumerateArray())
-                {
-                    groups.Add(item.Clone()); // ✅ Clone to keep data alive after disposal
-                }
-            }
-            else if (doc.RootElement.TryGetProperty("groups", out var arr) && arr.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in arr.EnumerateArray())
-                {
-                    groups.Add(item.Clone()); // ✅ Clone each item
-                }
-            }
+            if (root.TryGetProperty("groups", out var groups) && groups.ValueKind == JsonValueKind.Array)
+                return groups.EnumerateArray().Select(x => x.Clone()).ToList();
 
-            return groups;
+            return new();
         }
 
-        // --- Helpers ---
-
-        private static string Normalize(string number) =>
-            number.Replace("+", "").Replace("@c.us", "").Trim();
-
-        private static async Task EnsureSuccess(HttpResponseMessage resp)
-        {
-            if (!resp.IsSuccessStatusCode)
-            {
-                var text = await resp.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Request failed ({(int)resp.StatusCode} {resp.ReasonPhrase}): {text}");
-            }
-        }
-
-        // --- API Methods ---
-
-        public async Task<string> CreateGroupAsync(string groupName, IEnumerable<string> participants)
+        public async Task<string> CreateGroupAsync(string name, IEnumerable<string> participants)
         {
             var payload = new
             {
-                subject = groupName,
+                subject = name,
                 participants = participants.Select(Normalize).ToList()
             };
 
-            var response = await _http.PostAsJsonAsync("/groups", payload);
-            await EnsureSuccess(response);
+            var resp = await _http.PostAsJsonAsync("/groups", payload, JsonOpts);
+            await EnsureSuccess(resp);
 
-            var json = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-
+            var json = await resp.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
             return doc.RootElement.TryGetProperty("id", out var idEl)
                 ? idEl.GetString() ?? string.Empty
                 : string.Empty;
         }
 
+        public async Task UpdateGroupAsync(string groupId, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(groupId))
+                throw new ArgumentException("Group ID is required.", nameof(groupId));
+
+            var payload = new { subject = newName };
+            var resp = await _http.PutAsJsonAsync($"/groups/{groupId}", payload, JsonOpts);
+            await EnsureSuccess(resp);
+        }
+
+        public async Task AddParticipantsAsync(string groupId, IEnumerable<string> participants)
+        {
+            var payload = new { participants = participants.Select(Normalize).ToList() };
+            var resp = await _http.PostAsJsonAsync($"/groups/{groupId}/participants", payload, JsonOpts);
+            await EnsureSuccess(resp);
+        }
+
         public async Task RemoveParticipantsAsync(string groupId, IEnumerable<string> participants)
         {
             var payload = new { participants = participants.Select(Normalize).ToList() };
-            var response = await _http.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/groups/{groupId}/participants")
+            var req = new HttpRequestMessage(HttpMethod.Delete, $"/groups/{groupId}/participants")
             {
-                Content = JsonContent.Create(payload)
-            });
+                Content = JsonContent.Create(payload, options: JsonOpts)
+            };
 
-            await EnsureSuccess(response);
+            var resp = await _http.SendAsync(req);
+            await EnsureSuccess(resp);
         }
 
         public async Task LeaveGroupAsync(string groupId)
@@ -109,142 +101,98 @@ namespace WhatsAppAdmin.Services
         public async Task<JsonElement?> GetGroupInfoAsync(string groupId)
         {
             var resp = await _http.GetAsync($"/groups/{groupId}");
-            if (!resp.IsSuccessStatusCode)
-                return null;
+            if (!resp.IsSuccessStatusCode) return null;
 
-            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-            return doc.RootElement.Clone();
+            var stream = await resp.Content.ReadAsStreamAsync();
+            var root = await JsonSerializer.DeserializeAsync<JsonElement>(stream, JsonOpts);
+            return root.Clone();
         }
 
         public async Task SafeDeleteGroupAsync(string groupId)
         {
-            _logger.LogInformation("🔍 Checking group {GroupId} before deletion...", groupId);
+            _logger.LogInformation("Deleting group {GroupId} safely...", groupId);
 
             var info = await GetGroupInfoAsync(groupId);
             if (!info.HasValue)
             {
-                _logger.LogWarning("⚠️ Group {GroupId} not found.", groupId);
+                _logger.LogWarning("Group {GroupId} not found.", groupId);
                 return;
             }
 
-            var participants = new List<string>();
-            string? creatorId = null;
+            var participants = ExtractParticipants(info.Value);
+            var creator = info.Value.TryGetProperty("created_by", out var creatorEl)
+                ? Normalize(creatorEl.GetString() ?? string.Empty)
+                : null;
 
-            if (info.Value.TryGetProperty("participants", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            if (participants.Count == 1 && participants.First() == creator)
             {
-                foreach (var p in arr.EnumerateArray())
-                {
-                    string? id = null;
-
-                    if (p.ValueKind == JsonValueKind.String)
-                        id = p.GetString();
-                    else if (p.ValueKind == JsonValueKind.Object &&
-                             p.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String)
-                        id = idEl.GetString();
-
-                    if (!string.IsNullOrWhiteSpace(id))
-                        participants.Add(Normalize(id));
-                }
-            }
-
-            // Optional: get the creator (for your own logic)
-            if (info.Value.TryGetProperty("created_by", out var creatorEl) && creatorEl.ValueKind == JsonValueKind.String)
-                creatorId = Normalize(creatorEl.GetString()!);
-
-            _logger.LogInformation("👥 Found {Count} participant(s) in group {GroupId}", participants.Count, groupId);
-
-            // ✅ CASE 1: Group has only one participant (the creator)
-            if (participants.Count == 1 && participants.First() == creatorId)
-            {
-                _logger.LogWarning("🚫 Cannot remove creator when they are the only member in group {GroupId}. Skipping removal.", groupId);
+                _logger.LogWarning("Only creator in group {GroupId}; leaving group.", groupId);
                 await LeaveGroupAsync(groupId);
                 return;
             }
 
-            // ✅ CASE 2: Group has multiple members → remove all
-            const int batchSize = 50;
-            for (int i = 0; i < participants.Count; i += batchSize)
+            const int batch = 50;
+            for (int i = 0; i < participants.Count; i += batch)
             {
-                var batch = participants.Skip(i).Take(batchSize).ToList();
-                _logger.LogInformation("Removing {Count} participants from group {GroupId}...", batch.Count, groupId);
-                await RemoveParticipantsAsync(groupId, batch);
+                var chunk = participants.Skip(i).Take(batch).ToList();
+                await RemoveParticipantsAsync(groupId, chunk);
+                _logger.LogInformation("Removed {Count} members from {GroupId}", chunk.Count, groupId);
             }
 
-            // ✅ Finally, leave the group yourself
             await LeaveGroupAsync(groupId);
-            _logger.LogInformation("✅ Left group {GroupId}", groupId);
+            _logger.LogInformation("Left group {GroupId}", groupId);
         }
 
-
-        public async Task AddParticipantsAsync(string groupId, IEnumerable<string> participants)
-        {
-            var payload = new { participants = participants.Select(Normalize).ToList() };
-            var response = await _http.PostAsJsonAsync($"/groups/{groupId}/participants", payload);
-            await EnsureSuccess(response);
-        }
-
-        public async Task UpdateGroupAsync(string groupId, string newName)
-        {
-            if (string.IsNullOrWhiteSpace(groupId))
-                throw new ArgumentException("groupId is required", nameof(groupId));
-
-            var payload = new
-            {
-                subject = newName
-            };
-
-            // PUT /groups/{groupId}
-            var response = await _http.PutAsJsonAsync($"/groups/{groupId}", payload);
-            await EnsureSuccess(response);
-        }
-
-        public async Task AddUserToGroupAsync(string groupName, string phoneNumber)
+        public async Task AddUserToGroupAsync(string groupName, string phone)
         {
             var groups = await GetAllGroupsAsync();
-            var group = groups.FirstOrDefault(g => g.GetProperty("name").GetString() == groupName);
+            var group = groups.FirstOrDefault(g => g.TryGetProperty("name", out var n) && n.GetString() == groupName);
 
             if (group.ValueKind == JsonValueKind.Undefined)
-                throw new Exception("Group not found");
+                throw new InvalidOperationException($"Group '{groupName}' not found.");
 
             var groupId = group.GetProperty("id").GetString();
-            if (string.IsNullOrEmpty(groupId))
-                throw new Exception("Invalid group ID");
+            if (string.IsNullOrWhiteSpace(groupId))
+                throw new InvalidOperationException("Invalid group ID.");
 
-            // Format the request payload
-            var payload = new
-            {
-                participants = new[] { phoneNumber } // WhatsApp ID (e.g., "1234567890@c.us")
-            };
-
-            var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Correct API endpoint per the docs
-            var response = await _http.PostAsync($"/groups/{groupId}/participants", content);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var msg = await response.Content.ReadAsStringAsync();
-                throw new Exception($"API error: {msg}");
-            }
+            var payload = new { participants = new[] { Normalize(phone) } };
+            var resp = await _http.PostAsJsonAsync($"/groups/{groupId}/participants", payload, JsonOpts);
+            await EnsureSuccess(resp);
         }
 
+        private static string Normalize(string number)
+            => number.Replace("+", "").Replace("@c.us", "").Trim();
 
-        public async Task<string?> GetContactNameAsync(string phone)
+        private static List<string> ExtractParticipants(JsonElement info)
         {
-            // TO MANY API CALL FOR TESTING
-            //phone = Normalize(phone);
-            //var resp = await _http.GetAsync($"/contacts/{phone}");
-            //if (!resp.IsSuccessStatusCode)
-            //    return null;
+            var list = new List<string>();
 
-            //using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-            //if (doc.RootElement.TryGetProperty("pushName", out var nameEl))
-            //    return nameEl.GetString();
-            //if (doc.RootElement.TryGetProperty("name", out var altName))
-            //    return altName.GetString();
+            if (!info.TryGetProperty("participants", out var arr) || arr.ValueKind != JsonValueKind.Array)
+                return list;
 
-            return await Task.FromResult(phone);
+            foreach (var p in arr.EnumerateArray())
+            {
+                if (p.ValueKind == JsonValueKind.String)
+                    list.Add(Normalize(p.GetString() ?? ""));
+                else if (p.ValueKind == JsonValueKind.Object &&
+                         p.TryGetProperty("id", out var idEl) &&
+                         idEl.ValueKind == JsonValueKind.String)
+                    list.Add(Normalize(idEl.GetString() ?? ""));
+            }
+
+            return list;
+        }
+
+        private async Task EnsureSuccess(HttpResponseMessage resp)
+        {
+            if (resp.IsSuccessStatusCode) return;
+
+            var text = await resp.Content.ReadAsStringAsync();
+            _logger.LogError("Request failed: {Code} {Reason}. Body: {Body}",
+                (int)resp.StatusCode, resp.ReasonPhrase, text);
+
+            throw new HttpRequestException(
+                $"Request failed ({(int)resp.StatusCode} {resp.ReasonPhrase}): {text}");
         }
     }
 }

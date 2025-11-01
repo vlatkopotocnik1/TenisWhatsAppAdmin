@@ -1,14 +1,9 @@
 ﻿@page "/"
-@using System.Text.Json
 @using WhatsAppAdmin.Models
 @using WhatsAppAdmin.Services
-@inject ImportStateService ImportState
-@inject IService Service
-@inject IJSRuntime JS
-@inject WhatsAppAdmin.Services.WhapiService WhapiService
+
 @attribute [Authorize]
 <PageTitle>Index</PageTitle>
-
 
 @if (_loading)
 {
@@ -16,41 +11,33 @@
 }
 else
 {
-	@if (_whatsAppGroups.Count != 0)
-	{
-		<button class="btn-import btn-import-blue"
-				@onclick="SyncGroupsOnWhatsApp"
-				disabled="@_isCreating">
+	<div style="margin-bottom:10px;">
+		<button class="btn-import btn-import-blue" @onclick="SyncGroupsOnWhatsApp" disabled="@_isCreating">
 			<span class="btn-icon">🔄</span>
 			@(_isCreating ? "Syncing Groups…" : "Sync WhatsApp Groups")
 		</button>
-		<button class="btn-import btn-import-red"
-				@onclick="DeleteAllGroupsFromWhatsApp"
-				disabled="@_isDeleting">
+		<button class="btn-import btn-import-red" @onclick="DeleteAllGroupsFromWhatsApp" disabled="@_isDeleting">
 			<span class="btn-icon">🗑️</span>
 			@(_isDeleting ? "Deleting Groups…" : "Delete All WhatsApp Groups")
 		</button>
-	}
+	</div>
 
 	<div class="whatsAppGroups-board">
-		@foreach (var whatsAppGroup in _whatsAppGroups)
+		@foreach (var g in _whatsAppGroups)
 		{
 			<div class="whatsAppGroup-column">
 				<div class="whatsAppGroup-header"
-					 data-status="@GetGroupStatus(whatsAppGroup)"
+					 data-status="@GetGroupStatus(g)"
 					 @oncontextmenu:preventDefault
 					 @oncontextmenu:stopPropagation
-					 @oncontextmenu="e => ShowContextMenu(e, whatsAppGroup.Name)">
-					<div class="group-header-left" title="@whatsAppGroup.Name">
-						@whatsAppGroup.Name
-					</div>
-
+					 @oncontextmenu="e => ShowContextMenu(e, g.Name)">
+					<div class="group-header-left">@g.Name</div>
 					<div class="group-header-right">
-						@if (whatsAppGroup.IsNew)
+						@if (g.IsNew)
 						{
 							<div class="group-status-badge group-status-new">🆕 Will be created</div>
 						}
-						else if (whatsAppGroup.ToAdd.Any() || whatsAppGroup.ToRemove.Any())
+						else if (g.ToAdd.Any() || g.ToRemove.Any())
 						{
 							<div class="group-status-badge group-status-changed">⚙️ Has member changes</div>
 						}
@@ -62,42 +49,40 @@ else
 				</div>
 
 				<div class="whatsAppGroup-body">
-					@if (whatsAppGroup.Users.Count == 0 && !whatsAppGroup.ToAdd.Any())
+					@if (!g.Users.Any() && !g.ToAdd.Any())
 					{
 						<div class="empty-group">No users yet.</div>
 					}
 
-					@foreach (var user in whatsAppGroup.Users)
+					@foreach (var u in g.Users)
 					{
-						var isRemove = whatsAppGroup.ToRemove.Any(u => NormalizePhone(u.PhoneNumber) == NormalizePhone(user.PhoneNumber));
-						var css = isRemove ? "user-remove" : "user-row";
-
-						<div class="whatsAppGroup-grid @css" draggable="true" tabindex="0"
+						var isRemove = g.ToRemove.Any(r => NormalizePhone(r.PhoneNumber) == NormalizePhone(u.PhoneNumber));
+						<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row")"
 							 @oncontextmenu:preventDefault
 							 @oncontextmenu:stopPropagation
-							 @oncontextmenu="e => ShowUserContextMenu(e, user.Name)">
+							 @oncontextmenu="e => ShowUserContextMenu(e, u.Name)">
 							<div class="user-main">
-								@user.Name
-								@if (isRemove)
-								{
-									<span class="user-status user-status-remove">(Will be removed)</span>
+								@{
+									<span>@u.Name</span>
+									if (u.Name != u.PhoneNumber)
+									{
+										<span>(@u.PhoneNumber)</span>
+									}
+									if (isRemove)
+									{
+										<span class="user-status user-status-remove">(Will be removed)</span>
+									}
 								}
 							</div>
-							<div class="user-details">
-								<div><strong>Phone:</strong> @user.PhoneNumber</div>
-							</div>
+							@* <div class="user-details"><strong>Phone:</strong> @u.PhoneNumber</div> *@
 						</div>
 					}
 
-					@foreach (var user in whatsAppGroup.ToAdd)
+					@foreach (var u in g.ToAdd)
 					{
 						<div class="whatsAppGroup-grid user-add-preview">
-							<div class="user-main">
-								@user.Name <span class="user-status user-status-add">(Will be added)</span>
-							</div>
-							<div class="user-details">
-								<div><strong>Phone:</strong> @user.PhoneNumber</div>
-							</div>
+							<div class="user-main">@u.Name <span class="user-status user-status-add">(Will be added)</span></div>
+							<div class="user-details"><strong>Phone:</strong> @u.PhoneNumber</div>
 						</div>
 					}
 				</div>
@@ -107,111 +92,24 @@ else
 
 	@if (_contextMenuVisible)
 	{
-		<div class="context-menu" style="top: @_contextMenuY; left: @_contextMenuX;">
-			<div class="context-item" @onclick="() => ShowAddUserModal(_contextGroupName)">
-				➕ Add User
-			</div>
-			<div class="context-item" @onclick="() => BeginRenameGroup(_contextGroupName)">
-				🖊️ Rename Group
-			</div>
-			<div class="context-item" @onclick="() => ConfirmDeleteGroup(_contextGroupName)">
-				🗑️ Delete Group
-			</div>
+		<div class="context-menu" style="@($"top:{_contextMenuY}; left:{_contextMenuX};")">
+			<div class="context-item" @onclick="() => ShowAddUserModal(_contextGroupName)">➕ Add User</div>
+			<div class="context-item" @onclick="() => BeginRenameGroup(_contextGroupName)">🖊️ Rename Group</div>
+			<div class="context-item" @onclick="() => ConfirmDeleteGroup(_contextGroupName)">🗑️ Delete Group</div>
 		</div>
 	}
 
 	@if (_contextUserMenuVisible)
 	{
-		<div class="context-menu" style="top: @_contextUserMenuY; left: @_contextUserMenuX;">
-			<div class="context-item" @onclick="() => ConfirmDeleteUser(_contextUserName)">
-				🗑️ Delete User
-			</div>
-		</div>
-	}
-
-	@* Rename modal (simple) *@
-	@if (_renameDialogVisible)
-	{
-		<div class="modal-backdrop" @onclick="CloseRenameDialog" style="position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000;">
-			<div class="app-modal" style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; padding:18px; border-radius:8px; box-shadow:0 6px 24px rgba(0,0,0,0.25); z-index:10001;" @onclick:stopPropagation>
-				<div style="font-weight:700; margin-bottom:8px;">Rename group</div>
-				<div style="margin-bottom:12px;">
-					<input @bind="_renameNewName" class="form-control" placeholder="New group name" style="width:360px; max-width:80vw; padding:8px; border-radius:6px; border:1px solid #ddd;" />
-				</div>
-				<div style="display:flex; gap:8px; justify-content:flex-end;">
-					<button class="btn btn-secondary" @onclick="CloseRenameDialog" disabled="@_isRenaming">Cancel</button>
-					<button class="btn btn-primary" @onclick="ConfirmRenameGroup" disabled="@(_isRenaming || string.IsNullOrWhiteSpace(_renameNewName))">
-						@if (_isRenaming)
-						{
-							<span>⟳ Renaming…</span>
-						}
-						else
-						{
-							<span>Rename</span>
-						}
-					</button>
-				</div>
-			</div>
-		</div>
-	}
-	@if (_showAddUserModal)
-	{
-		<div class="modal-backdrop" @onclick="CloseRenameDialog" style="position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000;">
-			<div class="app-modal" style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; padding:18px; border-radius:8px; box-shadow:0 6px 24px rgba(0,0,0,0.25); z-index:10001;" @onclick:stopPropagation>
-				<div style="font-weight:700; margin-bottom:8px;">Add user</div>
-				<div style="margin-bottom:12px;">
-					<input @bind-value="_newUserPhone"
-						   @bind-value:event="oninput"
-						   class="form-control"
-						   placeholder="Phone"
-						   style="width:360px; max-width:80vw; padding:8px; border-radius:6px; border:1px solid #ddd;"
-						   @onkeypress="HandleKeyPress" />
-				</div>
-				<div style="display:flex; gap:8px; justify-content:flex-end;">
-					<button class="btn btn-secondary" @onclick ="CloseAddUserModal" disabled="@_isAddNewUser">Cancel</button>
-					<button class="btn btn-primary" @onclick="ConfirmAddUser" disabled="@(_isAddNewUser || string.IsNullOrWhiteSpace(_newUserPhone))">
-						@if (_isAddNewUser)
-						{
-							<span>⟳ Adding new user…</span>
-						}
-						else
-						{
-							<span>Add new user</span>
-						}
-					</button>
-				</div>
-			</div>
-		</div>
-	}
-	@if (_showDeleteConfirm)
-	{
-		<div class="modal-backdrop" style="position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000;">
-			<div class="confirm-modal" style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; padding:20px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); text-align:center; z-index:10001;">
-				<div style="font-weight:700; margin-bottom:12px;">Delete WhatsApp Group</div>
-				<div style="margin-bottom:16px;">
-					Are you sure you want to permanently delete <strong>@_pendingDeleteGroupName</strong>?
-				</div>
-				<div style="display:flex; justify-content:flex-end; gap:8px;">
-					<button class="btn btn-secondary" @onclick="CancelDeleteGroup">Cancel</button>
-					<button class="btn btn-danger" @onclick="ConfirmDeleteGroup">Delete</button>
-				</div>
-			</div>
-		</div>
-	}
-
-	@if (_showDeleteUserConfirm)
-	{
-		<div class="modal-backdrop" style="position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000;">
-			<div class="confirm-modal" style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; padding:20px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); text-align:center; z-index:10001;">
-				<div style="font-weight:700; margin-bottom:12px;">Delete User</div>
-				<div style="margin-bottom:16px;">
-					Are you sure you want to permanently delete <strong>@_pendingDeleteUserName</strong>?
-				</div>
-				<div style="display:flex; justify-content:flex-end; gap:8px;">
-					<button class="btn btn-secondary" @onclick="CancelDeleteUser">Cancel</button>
-					<button class="btn btn-danger" @onclick="ConfirmDeleteUser">Delete</button>
-				</div>
-			</div>
+		<div class="context-menu" style="@($"top:{_contextUserMenuY}; left:{_contextUserMenuX};")">
+			<div class="context-item" @onclick="() => ConfirmDeleteUser(_contextUserName)">🗑️ Delete User</div>
 		</div>
 	}
 }
+
+<GenericModal Visible="@_modalVisible"
+			  VisibleChanged="@((bool v) => _modalVisible = v)"
+			  Title="@_modalTitle"
+			  BodyText="@_modalBodyText"
+			  Fields="@_modalFields"
+			  Buttons="@_modalButtons" />
