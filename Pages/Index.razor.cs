@@ -444,5 +444,40 @@ namespace WhatsAppAdmin.Pages
                 StateHasChanged();
             }
         }
+
+        private void ToggleGroupMenu(MouseEventArgs e, string name)
+        {
+            if (_contextGroupName == name && _contextMenuVisible)
+            {
+                _contextMenuVisible = false;
+            }
+            else
+            {
+                _contextMenuVisible = true;
+                _contextUserMenuVisible = false;
+                _contextMenuX = $"{e.ClientX}px";
+                _contextMenuY = $"{e.ClientY}px";
+                _contextGroupName = name;
+            }
+            StateHasChanged();
+        }
+
+        private void ToggleUserMenu(MouseEventArgs e, string name)
+        {
+            if (_contextUserName == name && _contextUserMenuVisible)
+            {
+                _contextUserMenuVisible = false;
+            }
+            else
+            {
+                _contextUserMenuVisible = true;
+                _contextMenuVisible = false;
+                _contextUserMenuX = $"{e.ClientX}px";
+                _contextUserMenuY = $"{e.ClientY}px";
+                _contextUserName = name;
+            }
+            StateHasChanged();
+        }
+
     }
 }

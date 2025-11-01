@@ -26,11 +26,7 @@ else
 		@foreach (var g in _whatsAppGroups)
 		{
 			<div class="whatsAppGroup-column">
-				<div class="whatsAppGroup-header"
-					 data-status="@GetGroupStatus(g)"
-					 @oncontextmenu:preventDefault
-					 @oncontextmenu:stopPropagation
-					 @oncontextmenu="e => ShowContextMenu(e, g.Name)">
+				<div class="whatsAppGroup-header" data-status="@GetGroupStatus(g)">
 					<div class="group-header-left">@g.Name</div>
 					<div class="group-header-right">
 						@if (g.IsNew)
@@ -45,6 +41,11 @@ else
 						{
 							<div class="group-status-badge group-status-unchanged">✅ No changes</div>
 						}
+
+						<div class="menu-ellipsis"
+							 @onclick="e => ToggleGroupMenu(e, g.Name)" @onclick:stopPropagation>
+							⋯
+						</div>
 					</div>
 				</div>
 
@@ -57,24 +58,19 @@ else
 					@foreach (var u in g.Users)
 					{
 						var isRemove = g.ToRemove.Any(r => NormalizePhone(r.PhoneNumber) == NormalizePhone(u.PhoneNumber));
-						<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row")"
-							 @oncontextmenu:preventDefault
-							 @oncontextmenu:stopPropagation
-							 @oncontextmenu="e => ShowUserContextMenu(e, u.Name)">
+						<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row")" @onclick:stopPropagation>
 							<div class="user-main">
-								@{
-									<span>@u.Name</span>
-									if (u.Name != u.PhoneNumber)
-									{
-										<span>(@u.PhoneNumber)</span>
-									}
-									if (isRemove)
-									{
-										<span class="user-status user-status-remove">(Will be removed)</span>
-									}
+								<span>@u.Name</span>
+								@if (u.Name != u.PhoneNumber)
+								{
+									<span>(@u.PhoneNumber)</span>
 								}
 							</div>
-							@* <div class="user-details"><strong>Phone:</strong> @u.PhoneNumber</div> *@
+							<div class="menu-ellipsis"
+								 @onclick="e => ToggleUserMenu(e, u.Name)"
+								 @onclick:stopPropagation>
+								⋯
+							</div>
 						</div>
 					}
 
