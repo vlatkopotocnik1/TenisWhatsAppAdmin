@@ -43,7 +43,7 @@ else
 						}
 
 						<div class="menu-ellipsis"
-							 @onclick="e => ToggleGroupMenu(e, g.Name)" @onclick:stopPropagation>
+							 @onclick="e => ToggleGroupMenuAsync(e, g.Name)" @onclick:stopPropagation>
 							⋯
 						</div>
 					</div>
@@ -68,7 +68,7 @@ else
 								}
 							</div>
 							<div class="menu-ellipsis"
-								 @onclick="e => ToggleUserMenu(e, u.Name)"
+								 @onclick="e => ToggleUserMenuAsync(e, u.Name)"
 								 @onclick:stopPropagation>
 								⋯
 							</div>

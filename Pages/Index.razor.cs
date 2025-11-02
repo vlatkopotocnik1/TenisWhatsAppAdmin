@@ -28,6 +28,7 @@ namespace WhatsAppAdmin.Pages
         private string? _modalBodyText;
         private List<PromptDialog.GenericField>? _modalFields;
         private List<PromptDialog.GenericButton>? _modalButtons;
+        private record MenuPosition(double x, double y);
 
         protected override async Task OnInitializedAsync()
         {
@@ -506,7 +507,7 @@ namespace WhatsAppAdmin.Pages
             }
         }
 
-        private void ToggleGroupMenu(MouseEventArgs e, string name)
+        private async Task ToggleGroupMenuAsync(MouseEventArgs e, string name)
         {
             if (_contextGroupName == name && _contextMenuVisible)
             {
@@ -516,14 +517,15 @@ namespace WhatsAppAdmin.Pages
             {
                 _contextMenuVisible = true;
                 _contextUserMenuVisible = false;
-                _contextMenuX = $"{e.ClientX - 40}px";
-                _contextMenuY = $"{e.ClientY + 12}px";
+                var pos = await JS.InvokeAsync<MenuPosition>("adjustContextMenuPosition", e.ClientX, e.ClientY);
+                _contextMenuX = $"{pos.x}px";
+                _contextMenuY = $"{pos.y}px";
                 _contextGroupName = name;
             }
             StateHasChanged();
         }
 
-        private void ToggleUserMenu(MouseEventArgs e, string name)
+        private async Task ToggleUserMenuAsync(MouseEventArgs e, string name)
         {
             if (_contextUserName == name && _contextUserMenuVisible)
             {
@@ -533,8 +535,9 @@ namespace WhatsAppAdmin.Pages
             {
                 _contextUserMenuVisible = true;
                 _contextMenuVisible = false;
-                _contextUserMenuX = $"{e.ClientX - 40}px";
-                _contextUserMenuY = $"{e.ClientY + 12}px";
+                var pos = await JS.InvokeAsync<MenuPosition>("adjustContextMenuPosition", e.ClientX, e.ClientY);
+                _contextUserMenuX = $"{pos.x}px";
+                _contextUserMenuY = $"{pos.y}px";
                 _contextUserName = name;
             }
             StateHasChanged();
