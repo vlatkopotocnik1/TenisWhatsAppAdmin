@@ -82,6 +82,24 @@ namespace WhatsAppAdmin.Services
 
         public async Task RemoveParticipantsAsync(string groupId, IEnumerable<string> participants)
         {
+            var info = await GetGroupInfoAsync(groupId);
+            if (!info.HasValue)
+            {
+                _logger.LogWarning("Group {GroupId} not found.", groupId);
+                return;
+            }
+
+            var creator = info.Value.TryGetProperty("created_by", out var creatorEl)
+                ? Normalize(creatorEl.GetString() ?? string.Empty)
+                : null;
+
+            if (participants.Contains(creator) && participants.Count() == 1)
+            {
+                throw new InvalidOperationException($"❌ Creator cant be removed from group");
+            }
+
+            participants = participants.Where(p => p != creator).ToList();
+
             var payload = new { participants = participants.Select(Normalize).ToList() };
             var req = new HttpRequestMessage(HttpMethod.Delete, $"/groups/{groupId}/participants")
             {
@@ -139,7 +157,7 @@ namespace WhatsAppAdmin.Services
                 _logger.LogInformation("Removed {Count} members from {GroupId}", chunk.Count, groupId);
             }
 
-            await LeaveGroupAsync(groupId);
+            //await LeaveGroupAsync(groupId);
             _logger.LogInformation("Left group {GroupId}", groupId);
         }
 

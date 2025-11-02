@@ -63,12 +63,13 @@ namespace WhatsAppAdmin.Pages
             return outList;
         }
 
-        private async Task RefreshGroupsFromWhatsAppAsync()
+        private async Task RefreshGroupsFromWhatsAppAsync(bool isAfterDeleteAllUsers = false)
         {
+            await Task.Delay(1000);
             try
             {
                 var groupsFromWhatsApp = await WhapiService.GetAllGroupsAsync();
-                _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp);
+                _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp, isAfterDeleteAllUsers);
             }
             catch (Exception ex)
             {
@@ -76,12 +77,12 @@ namespace WhatsAppAdmin.Pages
             }
         }
 
-        private List<WhatsAppGroup> ConvertWhatsAppApiGroups(List<JsonElement> apiGroups)
+        private List<WhatsAppGroup> ConvertWhatsAppApiGroups(List<JsonElement> apiGroups, bool isAfterDeleteAllUsers = false)
         {
             var result = new List<WhatsAppGroup>();
             foreach (var g in apiGroups)
             {
-                var name = g.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String ? nameEl.GetString() ?? "Unnamed" : _whatsAppGroups.FirstOrDefault(x => x.Id == g.GetProperty("id").GetString())?.Name ?? "Unnamed"; 
+                var name = g.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String ? nameEl.GetString() ?? "Unnamed" : _whatsAppGroups.FirstOrDefault(x => x.Id == g.GetProperty("id").GetString())?.Name ?? "Unnamed";
                 var id = g.GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
                 var users = new List<User>();
                 if (g.TryGetProperty("participants", out var p) && p.ValueKind == JsonValueKind.Array && p.GetArrayLength() > 0)
@@ -111,7 +112,7 @@ namespace WhatsAppAdmin.Pages
                         }
                     }
                 }
-                else
+                else if (!isAfterDeleteAllUsers)
                 {
                     var existingGroup = _whatsAppGroups.FirstOrDefault(x => x.Id == id || x.Name == name);
                     if (existingGroup != null)
@@ -240,6 +241,8 @@ namespace WhatsAppAdmin.Pages
 
         private async Task RenameGroup(string oldName, string newName)
         {
+
+            await JS.InvokeVoidAsync("showToast", $"Renaming {oldName}", "info");
             var group = _whatsAppGroups.FirstOrDefault(g => g.Name == oldName);
             if (group == null) return;
 
@@ -253,7 +256,6 @@ namespace WhatsAppAdmin.Pages
 
             await WhapiService.UpdateGroupAsync(group.Id, newName);
             group.Name = newName;
-            await Task.Delay(1000);
             await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName}", "success");
             await RefreshGroupsFromWhatsAppAsync();
         }
@@ -283,10 +285,18 @@ namespace WhatsAppAdmin.Pages
             var group = _whatsAppGroups.FirstOrDefault(g => g.Name == groupName);
             if (group == null) return;
 
+            var ifExistingUser = group.Users.FirstOrDefault(u => string.Equals(u.PhoneNumber, NormalizePhone(phone).Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
+
+            if (ifExistingUser != null)
+            {
+                await JS.InvokeVoidAsync("showToast", $"⚠️ User {phone} is already in {groupName}", "warning");
+                return;
+            }
+
             // Create user object
             var newUser = new User
             {
-                Name = phone, 
+                Name = phone,
                 PhoneNumber = phone
             };
 
@@ -331,8 +341,8 @@ namespace WhatsAppAdmin.Pages
             }
 
             await WhapiService.SafeDeleteGroupAsync(group.Id);
-            await RefreshGroupsFromWhatsAppAsync();
             await JS.InvokeVoidAsync("showToast", $"✅ Users deleted from '{groupName}'", "success");
+            await RefreshGroupsFromWhatsAppAsync(true);
         }
 
         // 🗑️ Delete User
@@ -375,7 +385,15 @@ namespace WhatsAppAdmin.Pages
                 return;
             }
 
-            await WhapiService.RemoveParticipantsAsync(group.Id, [user.PhoneNumber]);
+            try
+            {
+                await WhapiService.RemoveParticipantsAsync(group.Id, [user.PhoneNumber]);
+            }
+            catch (InvalidOperationException ex)
+            {
+                await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                return;
+            }
             group.Users.Remove(user);
             await JS.InvokeVoidAsync("showToast", $"✅ User {userName} removed", "success");
         }
@@ -415,13 +433,20 @@ namespace WhatsAppAdmin.Pages
 
                         if (group.ToRemove.Count != 0)
                         {
-                            await WhapiService.RemoveParticipantsAsync(group.Id, group.ToRemove.Select(u => u.PhoneNumber));
+                            try
+                            {
+                                await WhapiService.RemoveParticipantsAsync(group.Id, group.ToRemove.Select(u => u.PhoneNumber));
+                            }
+                            catch (Exception ex)
+                            {
+                                await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                                break;
+                            }
                             await JS.InvokeVoidAsync("showToast", $"⚠️ Removed {group.ToRemove.Count} users from '{group.Name}'", "error");
                         }
-                    }                   
+                    }
                 }
 
-                await Task.Delay(1000);
                 await JS.InvokeVoidAsync("showToast", "✅ Sync complete.", "success");
                 await RefreshGroupsFromWhatsAppAsync();
             }

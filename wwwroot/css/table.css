@@ -162,8 +162,13 @@
 
 /* --- Glow Animation --- */
 @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 10px rgba(76, 175, 80, 0.4); }
-    50% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.8); }
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
+    }
 }
 
 /* --- Title --- */
@@ -200,9 +205,9 @@
         background-color: #f7f7f7;
     }
 
-.user-row:active {
-    cursor: grabbing;
-}
+    .user-row:active {
+        cursor: grabbing;
+    }
 
 /* --- Add/Remove Previews --- */
 .user-add-preview {
@@ -250,17 +255,17 @@
     transition: opacity 150ms ease, transform 150ms ease;
 }
 
-/* --- Tooltip Arrow --- */
-.user-details::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 16px;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid #fff;
-    filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.05));
-}
+    /* --- Tooltip Arrow --- */
+    .user-details::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 16px;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #fff;
+        filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.05));
+    }
 
 /* --- Show Tooltip on Hover --- */
 .user-row:hover .user-details,
@@ -306,16 +311,6 @@
         background: #fafafa;
     }
 }
-
-.context-item {
-    padding: 10px 12px;
-    cursor: pointer;
-    font-size: 0.95rem;
-}
-
-    .context-item:hover {
-        background: #f5f5f5;
-    }
 
 .app-modal input.form-control {
     width: 100%;
@@ -367,29 +362,55 @@
     background-color: inherit !important;
 }
 
-/* Context menu styling (like ChatGPT’s history) */
 .context-menu {
     position: absolute;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    z-index: 10001;
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
     overflow: hidden;
-    min-width: 160px;
+    z-index: 10001;
+    min-width: 180px;
+    padding: 6px 0;
     animation: fadeIn 0.15s ease;
 }
 
 .context-item {
-    padding: 8px 12px;
-    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
     font-size: 0.95rem;
-    transition: background 0.15s ease;
+    color: #202123;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
     .context-item:hover {
-        background: #f5f5f5;
+        background: #f7f7f8;
     }
+
+.context-separator {
+    height: 1px;
+    background: rgba(0,0,0,0.06);
+    margin: 4px 0;
+}
+
+/* Delete Item - red text */
+.context-item.delete {
+    color: #d93025;
+}
+
+    .context-item.delete:hover {
+        background: #fce8e6;
+    }
+
+.context-item svg,
+.context-item i {
+    width: 16px;
+    height: 16px;
+    color: #555;
+}
 
 @keyframes fadeIn {
     from {
