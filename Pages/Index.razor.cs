@@ -530,9 +530,9 @@ namespace WhatsAppAdmin.Pages
             StateHasChanged();
         }
 
-        private async Task ToggleUserMenuAsync(MouseEventArgs e, string name)
+        private async Task ToggleUserMenuAsync(MouseEventArgs e, string userPhone, string groupName)
         {
-            if (_contextUserName == name && _contextUserMenuVisible)
+            if (_contextUserName == userPhone && _contextUserMenuVisible && _contextGroupName == groupName)
             {
                 _contextUserMenuVisible = false;
             }
@@ -543,7 +543,10 @@ namespace WhatsAppAdmin.Pages
                 var pos = await JS.InvokeAsync<MenuPosition>("adjustContextMenuPosition", e.ClientX, e.ClientY);
                 _contextUserMenuX = $"{pos.x}px";
                 _contextUserMenuY = $"{pos.y}px";
-                _contextUserName = name;
+
+                // store them separately
+                _contextUserName = userPhone; // now stores phone only
+                _contextGroupName = groupName;
             }
             StateHasChanged();
         }

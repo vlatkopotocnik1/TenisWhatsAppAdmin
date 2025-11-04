@@ -58,7 +58,7 @@ else
 					@foreach (var u in g.Users)
 					{
 						var isRemove = g.ToRemove.Any(r => NormalizePhone(r.PhoneNumber) == NormalizePhone(u.PhoneNumber));
-						<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row") user-row @( _contextUserName == u.Name && _contextUserMenuVisible ? "menu-active" : "" )"
+						<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row") user-row @( _contextUserName == u.PhoneNumber && _contextUserMenuVisible && _contextGroupName == g.Name ? "menu-active" : "" )"
 							 @onclick:stopPropagation>
 							<div class="user-main">
 								<span>@u.Name</span>
@@ -74,7 +74,7 @@ else
 							@if (u.Rank != "creator")
 							{
 								<div class="menu-ellipsis"
-									 @onclick="e => ToggleUserMenuAsync(e, u.Name)"
+									 @onclick="e => ToggleUserMenuAsync(e, u.PhoneNumber, g.Name)"
 									 @onclick:stopPropagation>
 									⋯
 								</div>
