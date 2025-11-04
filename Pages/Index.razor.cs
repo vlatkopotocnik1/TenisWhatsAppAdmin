@@ -88,29 +88,34 @@ namespace WhatsAppAdmin.Pages
                 var users = new List<User>();
                 if (g.TryGetProperty("participants", out var p) && p.ValueKind == JsonValueKind.Array && p.GetArrayLength() > 0)
                 {
+                    static string? GetStringProp(in JsonElement el, string name) => el.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
                     foreach (var user in p.EnumerateArray())
                     {
-                        string? phone = null;
+                        string phone = string.Empty;
+                        string rank = string.Empty;
+                        string username = string.Empty;
 
                         if (user.ValueKind == JsonValueKind.String)
                         {
-                            phone = user.GetString();
+                            phone = user.GetString() ?? string.Empty;
                         }
-                        else if (user.ValueKind == JsonValueKind.Object &&
-                                 user.TryGetProperty("id", out var idUser) &&
-                                 idUser.ValueKind == JsonValueKind.String)
+                        else if (user.ValueKind == JsonValueKind.Object)
                         {
-                            phone = idUser.GetString();
+                            phone = GetStringProp(user, "id") ?? GetStringProp(user, "phone") ?? string.Empty;
+                            rank = GetStringProp(user, "rank") ?? string.Empty;
+                            username = GetStringProp(user, "username") ?? string.Empty;
                         }
 
-                        if (!string.IsNullOrWhiteSpace(phone))
+                        if (string.IsNullOrWhiteSpace(phone))
+                            continue;
+
+                        users.Add(new User
                         {
-                            users.Add(new User
-                            {
-                                Name = phone,
-                                PhoneNumber = phone
-                            });
-                        }
+                            Name = username,
+                            PhoneNumber = phone,
+                            Rank = rank
+                        });
                     }
                 }
                 else if (!isAfterDeleteAllUsers)

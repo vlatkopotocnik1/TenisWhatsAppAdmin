@@ -64,14 +64,21 @@ else
 								<span>@u.Name</span>
 								@if (u.Name != u.PhoneNumber)
 								{
-									<span>(@u.PhoneNumber)</span>
+									<span> @u.PhoneNumber </span>
+								}
+								@if (u.Rank == "admin" || u.Rank == "creator")
+								{
+									<span>(@(string.IsNullOrEmpty(u.Rank) ? "" : char.ToUpper(u.Rank[0]) + u.Rank.Substring(1).ToLower()))</span>
 								}
 							</div>
-							<div class="menu-ellipsis"
-								 @onclick="e => ToggleUserMenuAsync(e, u.Name)"
-								 @onclick:stopPropagation>
-								⋯
-							</div>
+							@if (u.Rank != "creator")
+							{
+								<div class="menu-ellipsis"
+									 @onclick="e => ToggleUserMenuAsync(e, u.Name)"
+									 @onclick:stopPropagation>
+									⋯
+								</div>
+							}
 						</div>
 					}
 
