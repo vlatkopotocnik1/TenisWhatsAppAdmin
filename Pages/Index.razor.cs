@@ -358,7 +358,7 @@ namespace WhatsAppAdmin.Pages
             _contextUserMenuVisible = false;
             ShowModal(
                 "Delete User",
-                $"Are you sure you want to delete <strong>{userName}</strong>?",
+                $"Are you sure you want to delete <strong>{userName}</strong> from <strong>{_contextGroupName}</strong>?",
                 null,
                 [
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
