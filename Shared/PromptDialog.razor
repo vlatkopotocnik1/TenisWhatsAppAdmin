@@ -76,12 +76,28 @@
 
     private async Task ButtonClicked(GenericButton btn)
     {
-        if (btn.OnClick.HasDelegate)
-            await btn.OnClick.InvokeAsync(Fields);
-
         if (btn.CloseOnClick)
-            await Close();
+        {
+            Visible = false;
+            await VisibleChanged.InvokeAsync(false);
+        }
+
+        if (btn.OnClick.HasDelegate)
+        {
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    await btn.OnClick.InvokeAsync(Fields);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Button action failed: {ex.Message}");
+                }
+            });
+        }
     }
+
 
     private async Task Close()
     {

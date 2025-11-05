@@ -5,117 +5,108 @@
 @attribute [Authorize]
 <PageTitle>Index</PageTitle>
 
-@if (_loading)
-{
-	<div style="padding:20px;">Loading…</div>
-}
-else
-{
-	<div style="margin-bottom:10px;">
-		<button class="btn-import btn-import-blue" @onclick="SyncGroupsOnWhatsApp" disabled="@_isCreating">
-			<span class="btn-icon">🔄</span>
-			@(_isCreating ? "Syncing Groups…" : "Sync WhatsApp Groups")
-		</button>
-		<button class="btn-import btn-import-red" @onclick="DeleteAllGroupsFromWhatsApp" disabled="@_isDeleting">
-			<span class="btn-icon">🗑️</span>
-			@(_isDeleting ? "Deleting Groups…" : "Delete All WhatsApp Groups")
-		</button>
-	</div>
+<div style="margin-bottom:10px;">
+	<button class="btn-import btn-import-blue" @onclick="SyncGroupsOnWhatsApp">
+		<span class="btn-icon">🔄Sync WhatsApp Groups</span>
+	</button>
+	<button class="btn-import btn-import-red" @onclick="DeleteAllGroupsFromWhatsApp">
+		<span class="btn-icon">🗑️Delete All WhatsApp Groups</span>
+	</button>
+</div>
 
-	<div class="whatsAppGroups-board">
-		@foreach (var g in _whatsAppGroups)
-		{
-			<div class="whatsAppGroup-column">
-				<div class="whatsAppGroup-header @( _contextGroupName == g.Name && _contextMenuVisible ? "menu-active" : "" )" data-status="@GetGroupStatus(g)">
-					<div class="group-header-left">@g.Name</div>
-					<div class="group-header-right">
-						@if (g.IsNew)
-						{
-							<div class="group-status-badge group-status-new">🆕 Will be created</div>
-						}
-						else if (g.ToAdd.Any() || g.ToRemove.Any())
-						{
-							<div class="group-status-badge group-status-changed">⚙️ Has member changes</div>
-						}
-						else
-						{
-							<div class="group-status-badge group-status-unchanged">✅ No changes</div>
-						}
+<div class="whatsAppGroups-board">
+	@foreach (var g in _whatsAppGroups)
+	{
+		<div class="whatsAppGroup-column">
+			<div class="whatsAppGroup-header @( _contextGroupName == g.Name && _contextMenuVisible ? "menu-active" : "" )" data-status="@GetGroupStatus(g)">
+				<div class="group-header-left">@g.Name</div>
+				<div class="group-header-right">
+					@if (g.IsNew)
+					{
+						<div class="group-status-badge group-status-new">🆕 Will be created</div>
+					}
+					else if (g.ToAdd.Any() || g.ToRemove.Any())
+					{
+						<div class="group-status-badge group-status-changed">⚙️ Has member changes</div>
+					}
+					else
+					{
+						<div class="group-status-badge group-status-unchanged">✅ No changes</div>
+					}
 
-						<div class="menu-ellipsis"
-							 @onclick="e => ToggleGroupMenuAsync(e, g.Name)" @onclick:stopPropagation>
-							⋯
-						</div>
+					<div class="menu-ellipsis"
+						 @onclick="e => ToggleGroupMenuAsync(e, g.Name)" @onclick:stopPropagation>
+						⋯
 					</div>
 				</div>
+			</div>
 
-				<div class="whatsAppGroup-body">
-					@if (!g.Users.Any() && !g.ToAdd.Any())
-					{
-						<div class="empty-group">No users yet.</div>
-					}
+			<div class="whatsAppGroup-body">
+				@if (!g.Users.Any() && !g.ToAdd.Any())
+				{
+					<div class="empty-group">No users yet.</div>
+				}
 
-					@foreach (var u in g.Users)
-					{
-						var isRemove = g.ToRemove.Any(r => NormalizePhone(r.PhoneNumber) == NormalizePhone(u.PhoneNumber));
-						<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row") user-row @( _contextUserName == u.PhoneNumber && _contextUserMenuVisible && _contextGroupName == g.Name ? "menu-active" : "" )">
-							<div class="user-main">
-								<span>@u.Name</span>
-								@if (u.Name != u.PhoneNumber)
-								{
-									<span> @u.PhoneNumber </span>
-								}
-								@if (u.Rank == "admin" || u.Rank == "creator")
-								{
-									<span>(@(string.IsNullOrEmpty(u.Rank) ? "" : char.ToUpper(u.Rank[0]) + u.Rank.Substring(1).ToLower()))</span>
-								}
-							</div>
-							@if (u.Rank != "creator")
+				@foreach (var u in g.Users)
+				{
+					var isRemove = g.ToRemove.Any(r => NormalizePhone(r.PhoneNumber) == NormalizePhone(u.PhoneNumber));
+					<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row") user-row @( _contextUserName == u.PhoneNumber && _contextUserMenuVisible && _contextGroupName == g.Name ? "menu-active" : "" )">
+						<div class="user-main">
+							<span>@u.Name</span>
+							@if (u.Name != u.PhoneNumber)
 							{
-								<div class="menu-ellipsis"
-									 @onclick="e => ToggleUserMenuAsync(e, u.PhoneNumber, g.Name)"
-									 @onclick:stopPropagation>
-									⋯
-								</div>
+								<span> @u.PhoneNumber </span>
+							}
+							@if (u.Rank == "admin" || u.Rank == "creator")
+							{
+								<span>(@(string.IsNullOrEmpty(u.Rank) ? "" : char.ToUpper(u.Rank[0]) + u.Rank.Substring(1).ToLower()))</span>
 							}
 						</div>
-					}
+						@if (u.Rank != "creator")
+						{
+							<div class="menu-ellipsis"
+								 @onclick="e => ToggleUserMenuAsync(e, u.PhoneNumber, g.Name)"
+								 @onclick:stopPropagation>
+								⋯
+							</div>
+						}
+					</div>
+				}
 
-					@foreach (var u in g.ToAdd)
-					{
-						<div class="whatsAppGroup-grid user-add-preview">
-							<div class="user-main">@u.Name <span class="user-status user-status-add">(Will be added)</span></div>
-							<div class="user-details"><strong>Phone:</strong> @u.PhoneNumber</div>
-						</div>
-					}
-				</div>
+				@foreach (var u in g.ToAdd)
+				{
+					<div class="whatsAppGroup-grid user-add-preview">
+						<div class="user-main">@u.Name <span class="user-status user-status-add">(Will be added)</span></div>
+						<div class="user-details"><strong>Phone:</strong> @u.PhoneNumber</div>
+					</div>
+				}
 			</div>
-		}
+		</div>
+	}
+</div>
+
+@if (_contextMenuVisible)
+{
+	<div class="context-menu" style="@($"top:{_contextMenuY}; left:{_contextMenuX};")">
+		<div class="context-item" @onclick="() => ConfirmAddUser(_contextGroupName)">
+			<i class="fa-solid user-plus"></i> Add User
+		</div>
+		<div class="context-item" @onclick="() => ConfirmRenameGroup(_contextGroupName)">
+			<i class="fa-solid fa-pen"></i> Rename Group
+		</div>
+		<div class="context-item delete" @onclick="() => ConfirmDeleteAllUsersFromGroup(_contextGroupName)">
+			<i class="fa-solid fa-trash"></i> Delete All Users
+		</div>
 	</div>
+}
 
-	@if (_contextMenuVisible)
-	{
-		<div class="context-menu" style="@($"top:{_contextMenuY}; left:{_contextMenuX};")">
-			<div class="context-item" @onclick="() => ConfirmAddUser(_contextGroupName)">
-				<i class="fa-solid user-plus"></i> Add User
-			</div>
-			<div class="context-item" @onclick="() => ConfirmRenameGroup(_contextGroupName)">
-				<i class="fa-solid fa-pen"></i> Rename Group
-			</div>
-			<div class="context-item delete" @onclick="() => ConfirmDeleteAllUsersFromGroup(_contextGroupName)">
-				<i class="fa-solid fa-trash"></i> Delete All Users
-			</div>
+@if (_contextUserMenuVisible)
+{
+	<div class="context-menu" style="@($"top:{_contextUserMenuY}; left:{_contextUserMenuX};")">
+		<div class="context-item delete" @onclick="() => ConfirmDeleteUser(_contextUserName)">
+			<i class="fa-solid fa-trash"></i> Delete User
 		</div>
-	}
-
-	@if (_contextUserMenuVisible)
-	{
-		<div class="context-menu" style="@($"top:{_contextUserMenuY}; left:{_contextUserMenuX};")">
-			<div class="context-item delete" @onclick="() => ConfirmDeleteUser(_contextUserName)">
-				<i class="fa-solid fa-trash"></i> Delete User
-			</div>
-		</div>
-	}
+	</div>
 }
 
 <PromptDialog Visible="@_modalVisible"

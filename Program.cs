@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using WhatsAppAdmin.Services;
+using MudBlazor.Services;
 using WhatsAppAdmin.Authentication;
+using WhatsAppAdmin.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,8 @@ builder.Services.AddHttpClient<WhapiService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+builder.Services.AddMudServices();
+builder.Services.AddSingleton<OverlayService>();
 
 
 var app = builder.Build();

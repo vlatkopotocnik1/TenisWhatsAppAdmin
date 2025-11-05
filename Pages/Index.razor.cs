@@ -13,9 +13,9 @@ namespace WhatsAppAdmin.Pages
         [Inject] private ImportStateService ImportState { get; set; } = default!;
         [Inject] private IJSRuntime JS { get; set; } = default!;
         [Inject] private WhapiService WhapiService { get; set; } = default!;
+        [Inject] private OverlayService OverlayService { get; set; } = null!;
 
         private List<WhatsAppGroup> _whatsAppGroups = [];
-        private bool _loading = true, _isCreating, _isDeleting;
 
         private bool _contextMenuVisible, _contextUserMenuVisible;
         private string _contextMenuX = "0px", _contextMenuY = "0px";
@@ -39,7 +39,6 @@ namespace WhatsAppAdmin.Pages
             }
             await RefreshGroupsFromWhatsAppAsync();
             GlobalEvents.OnHideContextMenu += HideContextMenu;
-            _loading = false;
         }
         private static List<WhatsAppGroup> ConvertImportedToWhatsAppGroups(IEnumerable<WhatsAppGroup> imported)
         {
@@ -66,16 +65,19 @@ namespace WhatsAppAdmin.Pages
 
         private async Task RefreshGroupsFromWhatsAppAsync(bool isAfterDeleteAllUsers = false)
         {
-            await Task.Delay(1000);
-            try
+            await OverlayService.RunAsync(async () =>
             {
-                var groupsFromWhatsApp = await WhapiService.GetAllGroupsAsync();
-                _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp, isAfterDeleteAllUsers);
-            }
-            catch (Exception ex)
-            {
-                await JS.InvokeVoidAsync("showToast", $"❌ Failed to refresh groups: {ex.Message}", "error");
-            }
+                await Task.Delay(1000);
+                try
+                {
+                    var groupsFromWhatsApp = await WhapiService.GetAllGroupsAsync();
+                    _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp, isAfterDeleteAllUsers);
+                }
+                catch (Exception ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to refresh groups: {ex.Message}", "error");
+                }
+            }, "Loading");
         }
 
         private List<WhatsAppGroup> ConvertWhatsAppApiGroups(List<JsonElement> apiGroups, bool isAfterDeleteAllUsers = false)
@@ -133,16 +135,19 @@ namespace WhatsAppAdmin.Pages
         {
             InvokeAsync(async () =>
             {
-                if (ImportState.HasGroups)
+                await OverlayService.RunAsync(async () =>
                 {
-                    var importedGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
-                    _whatsAppGroups = await MergeImportedWithWhatsAppAsync(importedGroups);
-                }
-                else
-                {
-                    await RefreshGroupsFromWhatsAppAsync();
-                }
-                StateHasChanged();
+                    if (ImportState.HasGroups)
+                    {
+                        var importedGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
+                        _whatsAppGroups = await MergeImportedWithWhatsAppAsync(importedGroups);
+                    }
+                    else
+                    {
+                        await RefreshGroupsFromWhatsAppAsync();
+                    }
+                    StateHasChanged();
+                }, "Importing");
             });
         }
 
@@ -248,22 +253,31 @@ namespace WhatsAppAdmin.Pages
         private async Task RenameGroup(string oldName, string newName)
         {
 
-            await JS.InvokeVoidAsync("showToast", $"Renaming {oldName}", "info");
-            var group = _whatsAppGroups.FirstOrDefault(g => g.Name == oldName);
-            if (group == null) return;
-
-            // If group is only local, just rename in memory
-            if (group.IsNew)
+            await OverlayService.RunAsync(async () =>
             {
-                group.Name = newName;
-                await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName}", "info");
-                return;
-            }
+                var group = _whatsAppGroups.FirstOrDefault(g => g.Name == oldName);
+                if (group == null) return;
 
-            await WhapiService.UpdateGroupAsync(group.Id, newName);
-            group.Name = newName;
-            await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName}", "success");
-            await RefreshGroupsFromWhatsAppAsync();
+                // If group is only local, just rename in memory
+                if (group.IsNew)
+                {
+                    group.Name = newName;
+                    await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName} (local only)", "info");
+                    return;
+                }
+
+                try
+                {
+                    await WhapiService.UpdateGroupAsync(group.Id, newName);
+                }
+                catch(Exception ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to rename group: {ex.Message}", "error");
+                }
+                group.Name = newName;
+                await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName}", "success");
+                await RefreshGroupsFromWhatsAppAsync();
+            }, $"Renaming");
         }
 
         // ➕ Add User
@@ -288,34 +302,45 @@ namespace WhatsAppAdmin.Pages
 
         private async Task AddUserToGroup(string groupName, string phone)
         {
-            var group = _whatsAppGroups.FirstOrDefault(g => g.Name == groupName);
-            if (group == null) return;
-
-            var ifExistingUser = group.Users.FirstOrDefault(u => string.Equals(u.PhoneNumber, NormalizePhone(phone).Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
-
-            if (ifExistingUser != null)
+            await OverlayService.RunAsync(async () =>
             {
-                await JS.InvokeVoidAsync("showToast", $"⚠️ User {phone} is already in {groupName}", "warning");
-                return;
-            }
+                var group = _whatsAppGroups.FirstOrDefault(g => g.Name == groupName);
+                if (group == null) return;
 
-            // Create user object
-            var newUser = new User
-            {
-                PhoneNumber = phone
-            };
+                var ifExistingUser = group.Users.FirstOrDefault(u => string.Equals(u.PhoneNumber, NormalizePhone(phone).Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
 
-            // If group is new (local only), just update the model
-            if (group.IsNew)
-            {
-                group.Users.Add(newUser);
-                await JS.InvokeVoidAsync("showToast", $"✅ Added {phone} to {groupName} (local only)", "info");
-                return;
-            }
+                if (ifExistingUser != null)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"⚠️ User {phone} is already in {groupName}", "warning");
+                    return;
+                }
 
-            await WhapiService.AddUserToGroupAsync(groupName, phone);
-            await JS.InvokeVoidAsync("showToast", $"✅ User {phone} added to {groupName}", "success");
-            await RefreshGroupsFromWhatsAppAsync();
+                // Create user object
+                var newUser = new User
+                {
+                    PhoneNumber = phone
+                };
+
+                // If group is new (local only), just update the model
+                if (group.IsNew)
+                {
+                    group.Users.Add(newUser);
+                    await JS.InvokeVoidAsync("showToast", $"✅ Added {phone} to {groupName} (local only)", "info");
+                    return;
+                }
+
+                try
+                {
+                    await WhapiService.AddUserToGroupAsync(groupName, phone);
+                }
+
+                catch(Exception ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to add user to group: {ex.Message}", "error");
+                }
+                await JS.InvokeVoidAsync("showToast", $"✅ User {phone} added to {groupName}", "success");
+                await RefreshGroupsFromWhatsAppAsync();
+            }, "Adding user");
         }
 
         // 🗑️ Delete Group
@@ -335,27 +360,35 @@ namespace WhatsAppAdmin.Pages
 
         private async Task DeleteAllUsersFromGroup(string groupName)
         {
-            var group = _whatsAppGroups.FirstOrDefault(x => x.Name == groupName);
-            if (group == null) return;
+            await OverlayService.RunAsync(async () =>
+            {
+                var group = _whatsAppGroups.FirstOrDefault(x => x.Name == groupName);
+                if (group == null) return;
 
-            if (group.IsNew)
-            {
-                _whatsAppGroups.Remove(group);
-                await JS.InvokeVoidAsync("showToast", $"✅ Users from group '{groupName}' removed", "info");
-                return;
-            }
+                if (group.IsNew)
+                {
+                    _whatsAppGroups.Remove(group);
+                    await JS.InvokeVoidAsync("showToast", $"✅ Users from group '{groupName}' removed", "info");
+                    return;
+                }
 
-            try
-            {
-                await WhapiService.SafeDeleteGroupAsync(group.Id);
-            } 
-            catch(Exception ex)
-            {
-                await JS.InvokeVoidAsync("showToast", ex.Message, "error");
-                return;
-            }
-            await JS.InvokeVoidAsync("showToast", $"✅ Users deleted from '{groupName}'", "success");
-            await RefreshGroupsFromWhatsAppAsync(true);
+                try
+                {
+                    await WhapiService.SafeDeleteGroupAsync(group.Id);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to delete all users from group: {ex.Message}", "error");
+                    return;
+                }
+                await JS.InvokeVoidAsync("showToast", $"✅ Users deleted from '{groupName}'", "error");
+                await RefreshGroupsFromWhatsAppAsync(true);
+            }, $"Deleting users");
         }
 
         // 🗑️ Delete User
@@ -375,40 +408,47 @@ namespace WhatsAppAdmin.Pages
 
         private async Task DeleteUser(string phoneNumber)
         {
-            var group = _whatsAppGroups.FirstOrDefault(g => g.Users.Any(u => u.PhoneNumber == phoneNumber));
-            if (group == null) return;
-
-            // Check if user is only in "ToAdd" (not yet on WhatsApp)
-            var userInToAdd = group.ToAdd.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
-            if (userInToAdd != null)
+            await OverlayService.RunAsync(async () =>
             {
-                group.ToAdd.Remove(userInToAdd);
-                await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "info");
-                return;
-            }
+                var group = _whatsAppGroups.FirstOrDefault(g => g.Users.Any(u => u.PhoneNumber == phoneNumber));
+                if (group == null) return;
 
-            var user = group.Users.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
-            if (user == null) return;
+                // Check if user is only in "ToAdd" (not yet on WhatsApp)
+                var userInToAdd = group.ToAdd.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
+                if (userInToAdd != null)
+                {
+                    group.ToAdd.Remove(userInToAdd);
+                    await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "info");
+                    return;
+                }
 
-            // If group not yet created on WhatsApp, just remove locally
-            if (group.IsNew)
-            {
+                var user = group.Users.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
+                if (user == null) return;
+
+                // If group not yet created on WhatsApp, just remove locally
+                if (group.IsNew)
+                {
+                    group.Users.Remove(user);
+                    await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "info");
+                    return;
+                }
+
+                try
+                {
+                    await WhapiService.RemoveParticipantsAsync(group.Id, [user.PhoneNumber]);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                    return;
+                }
+                catch(Exception ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to delete user from group: {ex.Message}", "error");
+                }
                 group.Users.Remove(user);
-                await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "info");
-                return;
-            }
-
-            try
-            {
-                await WhapiService.RemoveParticipantsAsync(group.Id, [user.PhoneNumber]);
-            }
-            catch (InvalidOperationException ex)
-            {
-                await JS.InvokeVoidAsync("showToast", ex.Message, "error");
-                return;
-            }
-            group.Users.Remove(user);
-            await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "success");
+                await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "success");
+            }, "Deleting user");
         }
 
         public void Dispose()
@@ -423,104 +463,103 @@ namespace WhatsAppAdmin.Pages
 
         private async Task SyncGroupsOnWhatsApp()
         {
-            _isCreating = true;
-
-            await JS.InvokeVoidAsync("showToast", "Starting group sync…", "info");
-            StateHasChanged();
-
-            try
+            await OverlayService.RunAsync(async () =>
             {
-                foreach (var group in _whatsAppGroups)
-                {
-                    if (group.IsNew)
-                    {
-                        // create group
-                        var phones = group.Users.Select(u => u.PhoneNumber).ToList();
-                        group.Id = await WhapiService.CreateGroupAsync(group.Name, phones);
-                        await JS.InvokeVoidAsync("showToast", $"✅ Created new group '{group.Name}'", "success");
-                    }
-                    else
-                    {
-                        // update group
-                        if (group.ToAdd.Count != 0)
-                        {
-                            await WhapiService.AddParticipantsAsync(group.Id, group.ToAdd.Select(u => u.PhoneNumber));
-                            await JS.InvokeVoidAsync("showToast", $"✅ Added {group.ToAdd.Count} users to '{group.Name}'", "success");
-                        }
-
-                        if (group.ToRemove.Count != 0)
-                        {
-                            try
-                            {
-                                await WhapiService.RemoveParticipantsAsync(group.Id, group.ToRemove.Select(u => u.PhoneNumber));
-                            }
-                            catch (Exception ex)
-                            {
-                                await JS.InvokeVoidAsync("showToast", ex.Message, "error");
-                                break;
-                            }
-                            await JS.InvokeVoidAsync("showToast", $"⚠️ Removed {group.ToRemove.Count} users from '{group.Name}'", "error");
-                        }
-                    }
-                }
-
-                await JS.InvokeVoidAsync("showToast", "✅ Sync complete.", "success");
-                await RefreshGroupsFromWhatsAppAsync();
-            }
-            catch (Exception ex)
-            {
-                await JS.InvokeVoidAsync("showToast", $"❌ Error during sync: {ex.Message}", "error");
-            }
-            finally
-            {
-                _isCreating = false;
                 StateHasChanged();
-            }
+
+                try
+                {
+                    foreach (var group in _whatsAppGroups)
+                    {
+                        if (group.IsNew)
+                        {
+                            // create group
+                            var phones = group.Users.Select(u => u.PhoneNumber).ToList();
+                            group.Id = await WhapiService.CreateGroupAsync(group.Name, phones);
+                            await JS.InvokeVoidAsync("showToast", $"✅ Created new group '{group.Name}'", "success");
+                        }
+                        else
+                        {
+                            // update group
+                            if (group.ToAdd.Count != 0)
+                            {
+                                await WhapiService.AddParticipantsAsync(group.Id, group.ToAdd.Select(u => u.PhoneNumber));
+                                await JS.InvokeVoidAsync("showToast", $"✅ Added {group.ToAdd.Count} users to '{group.Name}'", "success");
+                            }
+
+                            if (group.ToRemove.Count != 0)
+                            {
+                                try
+                                {
+                                    await WhapiService.RemoveParticipantsAsync(group.Id, group.ToRemove.Select(u => u.PhoneNumber));
+                                }
+                                catch (Exception ex)
+                                {
+                                    await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                                    break;
+                                }
+                                await JS.InvokeVoidAsync("showToast", $"⚠️ Removed {group.ToRemove.Count} users from '{group.Name}'", "error");
+                            }
+                        }
+                    }
+
+                    await JS.InvokeVoidAsync("showToast", "✅ Sync complete.", "success");
+                    await RefreshGroupsFromWhatsAppAsync();
+                }
+                catch (Exception ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"❌ Error during sync: {ex.Message}", "error");
+                }
+                finally
+                {
+                    StateHasChanged();
+                }
+            }, "Syncing groups on Whatsapp");
         }
 
         private async Task DeleteAllGroupsFromWhatsApp()
         {
-            _isDeleting = true;
-            await JS.InvokeVoidAsync("showToast", "Deleting all WhatsApp groups…", "info");
-            StateHasChanged();
-
-            try
+            await OverlayService.RunAsync(async () =>
             {
-                int total = _whatsAppGroups.Count;
-                int current = 0;
-
-                foreach (var group in _whatsAppGroups)
-                {
-                    current++;
-
-                    await JS.InvokeVoidAsync("showToast", $"Deleting group {current}/{total}: {group.Name}", "error");
-                    StateHasChanged();
-
-                    try
-                    {
-                        await WhapiService.SafeDeleteGroupAsync(group.Id);
-
-                        await JS.InvokeVoidAsync("showToast", $"✅ Deleted '{group.Name}'", "error");
-                    }
-                    catch (Exception ex)
-                    {
-                        await JS.InvokeVoidAsync("showToast", $"❌ Failed to delete '{group.Name}': {ex.Message}", "error");
-                    }
-
-                    await Task.Delay(300); // slight delay to avoid hitting rate limits
-                }
-
-                await JS.InvokeVoidAsync("showToast", "All groups processed.", "success");
-            }
-            catch (Exception ex)
-            {
-                await JS.InvokeVoidAsync("showToast", $"❌ Fatal error: {ex.Message}", "error");
-            }
-            finally
-            {
-                _isDeleting = false;
                 StateHasChanged();
-            }
+
+                try
+                {
+                    int total = _whatsAppGroups.Count;
+                    int current = 0;
+
+                    foreach (var group in _whatsAppGroups)
+                    {
+                        current++;
+
+                        await JS.InvokeVoidAsync("showToast", $"Deleting group {current}/{total}: {group.Name}", "error");
+                        StateHasChanged();
+
+                        try
+                        {
+                            await WhapiService.SafeDeleteGroupAsync(group.Id);
+
+                            await JS.InvokeVoidAsync("showToast", $"✅ Deleted '{group.Name}'", "error");
+                        }
+                        catch (Exception ex)
+                        {
+                            await JS.InvokeVoidAsync("showToast", $"❌ Failed to delete '{group.Name}': {ex.Message}", "error");
+                        }
+
+                        await Task.Delay(300); // slight delay to avoid hitting rate limits
+                    }
+
+                    await JS.InvokeVoidAsync("showToast", "All groups processed.", "success");
+                }
+                catch (Exception ex)
+                {
+                    await JS.InvokeVoidAsync("showToast", $"❌ Fatal error: {ex.Message}", "error");
+                }
+                finally
+                {
+                    StateHasChanged();
+                }
+            }, "Deleting all groups on Whatsapp");
         }
 
         private async Task ToggleGroupMenuAsync(MouseEventArgs e, string name)

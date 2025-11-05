@@ -1,0 +1,44 @@
+﻿@using MudBlazor
+@using WhatsAppAdmin.Services
+@inject OverlayService OverlayService
+
+<MudOverlay Visible="@IsVisible"
+            Class="overlay d-flex flex-column justify-center align-center"
+            ZIndex="2000">
+    <MudPaper Class="p-6 d-flex flex-column align-center"
+              Elevation="0"
+              Square="false"
+              Style="background-color: transparent;">
+        <MudProgressCircular Indeterminate="true"
+                             Color="Color.Primary"
+                             Size="Size.Large" />
+        <MudText Typo="Typo.h6" Class="mt-3 text-center">@Message</MudText>
+    </MudPaper>
+</MudOverlay>
+
+<style>
+    .overlay {
+        background-color: rgba(255, 255, 255, 0.7); /* white with 70% opacity */
+        backdrop-filter: blur(4px); /* soft blur effect for depth */
+        position: fixed; /* ensure full-page coverage */
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+    }
+</style>
+
+@code {
+    private bool IsVisible;
+    private string Message = "Loading...";
+
+    protected override void OnInitialized()
+    {
+        OverlayService.OnChange += (visible, message) =>
+        {
+            IsVisible = visible;
+            Message = message;
+            InvokeAsync(StateHasChanged);
+        };
+    }
+}
