@@ -28,7 +28,7 @@ namespace WhatsAppAdmin.Pages
         private string? _modalBodyText;
         private List<PromptDialog.GenericField>? _modalFields;
         private List<PromptDialog.GenericButton>? _modalButtons;
-        private record MenuPosition(double x, double y);
+        private record MenuPosition(double X, double Y);
 
         protected override async Task OnInitializedAsync()
         {
@@ -302,7 +302,6 @@ namespace WhatsAppAdmin.Pages
             // Create user object
             var newUser = new User
             {
-                Name = phone,
                 PhoneNumber = phone
             };
 
@@ -352,42 +351,42 @@ namespace WhatsAppAdmin.Pages
         }
 
         // 🗑️ Delete User
-        private void ConfirmDeleteUser(string? userName)
+        private void ConfirmDeleteUser(string? phoneNumber)
         {
-            if (string.IsNullOrWhiteSpace(userName)) return;
+            if (string.IsNullOrWhiteSpace(phoneNumber)) return;
             _contextUserMenuVisible = false;
             ShowModal(
                 "Delete User",
-                $"Are you sure you want to delete <strong>{userName}</strong> from <strong>{_contextGroupName}</strong>?",
+                $"Are you sure you want to delete <strong>{phoneNumber}</strong> from <strong>{_contextGroupName}</strong>?",
                 null,
                 [
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteUser(userName)) }
+                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteUser(phoneNumber)) }
                 ]);
         }
 
-        private async Task DeleteUser(string userName)
+        private async Task DeleteUser(string phoneNumber)
         {
-            var group = _whatsAppGroups.FirstOrDefault(g => g.Users.Any(u => u.Name == userName));
+            var group = _whatsAppGroups.FirstOrDefault(g => g.Users.Any(u => u.PhoneNumber == phoneNumber));
             if (group == null) return;
 
             // Check if user is only in "ToAdd" (not yet on WhatsApp)
-            var userInToAdd = group.ToAdd.FirstOrDefault(u => u.Name == userName);
+            var userInToAdd = group.ToAdd.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
             if (userInToAdd != null)
             {
                 group.ToAdd.Remove(userInToAdd);
-                await JS.InvokeVoidAsync("showToast", $"✅ User {userName} removed", "info");
+                await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "info");
                 return;
             }
 
-            var user = group.Users.FirstOrDefault(u => u.Name == userName);
+            var user = group.Users.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
             if (user == null) return;
 
             // If group not yet created on WhatsApp, just remove locally
             if (group.IsNew)
             {
                 group.Users.Remove(user);
-                await JS.InvokeVoidAsync("showToast", $"✅ User {userName} removed", "info");
+                await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "info");
                 return;
             }
 
@@ -401,13 +400,17 @@ namespace WhatsAppAdmin.Pages
                 return;
             }
             group.Users.Remove(user);
-            await JS.InvokeVoidAsync("showToast", $"✅ User {userName} removed", "success");
+            await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "success");
         }
 
         public void Dispose()
         {
+            // Unsubscribe from events to prevent memory leaks
             ImportState.OnChange -= OnImportStateChanged;
             GlobalEvents.OnHideContextMenu -= HideContextMenu;
+
+            // Tell the GC there's no need to call a finalizer for this instance
+            GC.SuppressFinalize(this);
         }
 
         private async Task SyncGroupsOnWhatsApp()
@@ -523,8 +526,8 @@ namespace WhatsAppAdmin.Pages
                 _contextMenuVisible = true;
                 _contextUserMenuVisible = false;
                 var pos = await JS.InvokeAsync<MenuPosition>("adjustContextMenuPosition", e.ClientX, e.ClientY);
-                _contextMenuX = $"{pos.x}px";
-                _contextMenuY = $"{pos.y}px";
+                _contextMenuX = $"{pos.X}px";
+                _contextMenuY = $"{pos.Y}px";
                 _contextGroupName = name;
             }
             StateHasChanged();
@@ -541,8 +544,8 @@ namespace WhatsAppAdmin.Pages
                 _contextUserMenuVisible = true;
                 _contextMenuVisible = false;
                 var pos = await JS.InvokeAsync<MenuPosition>("adjustContextMenuPosition", e.ClientX, e.ClientY);
-                _contextUserMenuX = $"{pos.x}px";
-                _contextUserMenuY = $"{pos.y}px";
+                _contextUserMenuX = $"{pos.X}px";
+                _contextUserMenuY = $"{pos.Y}px";
 
                 // store them separately
                 _contextUserName = userPhone; // now stores phone only

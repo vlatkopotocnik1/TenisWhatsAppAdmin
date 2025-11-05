@@ -126,10 +126,10 @@
 
             // columns: GroupName ; PlayerName ; PhoneNumber
             var groupName = record.Length >= 1 ? (record[0] ?? "").Trim() : "";
-            var playerName = record.Length >= 2 ? (record[1] ?? "").Trim() : "";
+            var userName = record.Length >= 2 ? (record[1] ?? "").Trim() : "";
             var phoneRaw = record.Length >= 3 ? (record[2] ?? "").Trim() : "";
 
-            if (string.IsNullOrWhiteSpace(groupName) && string.IsNullOrWhiteSpace(playerName)) continue;
+            if (string.IsNullOrWhiteSpace(groupName) && string.IsNullOrWhiteSpace(userName)) continue;
 
             // normalize phone minimally
             string phone = NormalizePhone(phoneRaw);
@@ -143,7 +143,7 @@
 
             group.Users.Add(new User
             {
-                Name = playerName,
+                Name = userName,
                 PhoneNumber = phone
             });
         }

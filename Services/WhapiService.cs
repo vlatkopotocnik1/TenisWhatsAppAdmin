@@ -37,12 +37,12 @@ namespace WhatsAppAdmin.Services
             var root = await JsonSerializer.DeserializeAsync<JsonElement>(stream, JsonOpts);
 
             if (root.ValueKind == JsonValueKind.Array)
-                return root.EnumerateArray().Select(x => x.Clone()).ToList();
+                return [.. root.EnumerateArray().Select(x => x.Clone())];
 
             if (root.TryGetProperty("groups", out var groups) && groups.ValueKind == JsonValueKind.Array)
-                return groups.EnumerateArray().Select(x => x.Clone()).ToList();
+                return [.. groups.EnumerateArray().Select(x => x.Clone())];
 
-            return new();
+            return [];
         }
 
         public async Task<string> CreateGroupAsync(string name, IEnumerable<string> participants)
@@ -98,7 +98,7 @@ namespace WhatsAppAdmin.Services
                 throw new InvalidOperationException($"❌ Creator cant be removed from group");
             }
 
-            participants = participants.Where(p => p != creator).ToList();
+            participants = [.. participants.Where(p => p != creator)];
 
             var payload = new { participants = participants.Select(Normalize).ToList() };
             var req = new HttpRequestMessage(HttpMethod.Delete, $"/groups/{groupId}/participants")
