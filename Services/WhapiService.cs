@@ -145,9 +145,11 @@ namespace WhatsAppAdmin.Services
             if (participants.Count == 1 && participants.First() == creator)
             {
                 _logger.LogWarning("Only creator in group {GroupId}; leaving group.", groupId);
-                await LeaveGroupAsync(groupId);
-                return;
+                //await LeaveGroupAsync(groupId);
+                throw new InvalidOperationException("There’s only the group creator left, and they can’t be removed.");
             }
+
+            participants.Remove(creator);
 
             const int batch = 50;
             for (int i = 0; i < participants.Count; i += batch)

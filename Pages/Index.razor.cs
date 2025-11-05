@@ -345,7 +345,15 @@ namespace WhatsAppAdmin.Pages
                 return;
             }
 
-            await WhapiService.SafeDeleteGroupAsync(group.Id);
+            try
+            {
+                await WhapiService.SafeDeleteGroupAsync(group.Id);
+            } 
+            catch(Exception ex)
+            {
+                await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                return;
+            }
             await JS.InvokeVoidAsync("showToast", $"✅ Users deleted from '{groupName}'", "success");
             await RefreshGroupsFromWhatsAppAsync(true);
         }
@@ -429,7 +437,7 @@ namespace WhatsAppAdmin.Pages
                         // create group
                         var phones = group.Users.Select(u => u.PhoneNumber).ToList();
                         group.Id = await WhapiService.CreateGroupAsync(group.Name, phones);
-                        await JS.InvokeVoidAsync("showToast", $"✅ Created new group '{group.Name}' → {group.Id}", "success");
+                        await JS.InvokeVoidAsync("showToast", $"✅ Created new group '{group.Name}'", "success");
                     }
                     else
                     {
