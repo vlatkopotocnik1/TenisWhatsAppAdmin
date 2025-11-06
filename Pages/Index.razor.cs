@@ -18,12 +18,6 @@ namespace WhatsAppAdmin.Pages
 
         private List<WhatsAppGroup> _whatsAppGroups = [];
 
-        private bool _contextMenuVisible, _contextUserMenuVisible;
-        private readonly string _contextMenuX = "0px";
-        private readonly string _contextMenuY = "0px";
-        private string _contextUserMenuX = "0px", _contextUserMenuY = "0px";
-        private string _contextGroupName = String.Empty, _contextUserName = String.Empty;
-
         // Modal system
         private bool _modalVisible;
         private string _modalTitle = "";
@@ -215,7 +209,6 @@ namespace WhatsAppAdmin.Pages
 
         private void HideContextMenu()
         {
-            _contextMenuVisible = _contextUserMenuVisible = false;
             InvokeAsync(StateHasChanged);
         }
 
@@ -232,7 +225,6 @@ namespace WhatsAppAdmin.Pages
         // 📝 Rename Group
         private void ConfirmRenameGroup(string groupName)
         {
-            _contextMenuVisible = false;
             ShowModal(
                 "Rename group",
                 null,
@@ -282,7 +274,6 @@ namespace WhatsAppAdmin.Pages
         // ➕ Add User
         private void ConfirmAddUser(string groupName)
         {
-            _contextMenuVisible = false;
             ShowModal(
                 "Add user",
                 null,
@@ -346,7 +337,6 @@ namespace WhatsAppAdmin.Pages
         private void ConfirmDeleteAllUsersFromGroup(string? groupName)
         {
             if (string.IsNullOrWhiteSpace(groupName)) return;
-            _contextMenuVisible = false;
             ShowModal(
                 "Delete all users from WhatsApp group",
                 $"Are you sure you want to delete all users from <strong>{groupName}</strong>?",
@@ -394,7 +384,6 @@ namespace WhatsAppAdmin.Pages
         private void ConfirmDeleteUser(string phoneNumber, string groupName)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber)) return;
-            _contextUserMenuVisible = false;
             ShowModal(
                 "Delete User",
                 $"Are you sure you want to delete <strong>{phoneNumber}</strong> from <strong>{groupName}</strong>?",

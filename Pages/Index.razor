@@ -33,7 +33,7 @@
 	@foreach (var g in _whatsAppGroups)
 	{
 		<div class="whatsAppGroup-column">
-			<div class="whatsAppGroup-header @( _contextGroupName == g.Name && _contextMenuVisible ? "menu-active" : "" )" data-status="@GetGroupStatus(g)">
+			<div class="whatsAppGroup-header" data-status="@GetGroupStatus(g)">
 				<div class="group-header-left">@g.Name</div>
 				<div class="group-header-right">
 					<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="0">
