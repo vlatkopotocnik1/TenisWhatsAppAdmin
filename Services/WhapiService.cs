@@ -180,6 +180,33 @@ namespace WhatsAppAdmin.Services
             await EnsureSuccess(resp);
         }
 
+        // send a text message to a group (groupId or groupName depending on API)
+        public async Task SendMessageToGroupAsync(string groupId, string message)
+        {
+            var payload = new { id = groupId, message };
+            var resp = await _http.PostAsJsonAsync("/groups/sendMessage", payload);
+            await EnsureSuccess(resp);
+        }
+
+        // send message to an individual phone
+        public async Task SendMessageToPhoneAsync(string phone, string message)
+        {
+            var payload = new { to = phone, message };
+            var resp = await _http.PostAsJsonAsync("/messages/send", payload);
+            await EnsureSuccess(resp);
+        }
+
+        // send message to many phones (batch)
+        public async Task SendBulkMessagesAsync(IEnumerable<string> phones, string message)
+        {
+            // implement batching if API has limits
+            foreach (var chunk in phones.Chunk(50))
+            {
+                var payload = chunk.Select(p => new { to = p, message }).ToList();
+                await _http.PostAsJsonAsync("/messages/batch", payload);
+            }
+        }
+
         private static string Normalize(string number)
             => number.Replace("+", "").Replace("@c.us", "").Trim();
 

@@ -1,18 +1,33 @@
 ﻿@page "/"
+@using MudBlazor
 @using WhatsAppAdmin.Models
 @using WhatsAppAdmin.Services
+@inject IDialogService DialogService
 
 @attribute [Authorize]
 <PageTitle>Index</PageTitle>
 
-<div style="margin-bottom:10px;">
-	<button class="btn-import btn-import-blue" @onclick="SyncGroupsOnWhatsApp">
-		<span class="btn-icon">🔄Sync WhatsApp Groups</span>
-	</button>
-	<button class="btn-import btn-import-red" @onclick="DeleteAllGroupsFromWhatsApp">
-		<span class="btn-icon">🗑️Delete All WhatsApp Groups</span>
-	</button>
-</div>
+<Toolbar />
+
+@if (_whatsAppGroups.Count != 0)
+{
+	<div style="margin-bottom:10px;">
+		<MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SyncGroupsOnWhatsApp">
+			<MudIcon Icon="@Icons.Material.Filled.Sync" Class="me-2" />
+			Sync WhatsApp Groups
+		</MudButton>
+
+		<MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="DeleteAllGroupsFromWhatsApp">
+			<MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="me-2" />
+			Delete All WhatsApp Groups
+		</MudButton>
+
+		<MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="OpenBroadcastAllDialog">
+			<MudIcon Icon="@Icons.Material.Filled.Campaign" Class="me-2" />
+			Broadcast to All Groups
+		</MudButton>
+	</div>
+}
 
 <div class="whatsAppGroups-board">
 	@foreach (var g in _whatsAppGroups)
@@ -21,23 +36,38 @@
 			<div class="whatsAppGroup-header @( _contextGroupName == g.Name && _contextMenuVisible ? "menu-active" : "" )" data-status="@GetGroupStatus(g)">
 				<div class="group-header-left">@g.Name</div>
 				<div class="group-header-right">
-					@if (g.IsNew)
-					{
-						<div class="group-status-badge group-status-new">🆕 Will be created</div>
-					}
-					else if (g.ToAdd.Any() || g.ToRemove.Any())
-					{
-						<div class="group-status-badge group-status-changed">⚙️ Has member changes</div>
-					}
-					else
-					{
-						<div class="group-status-badge group-status-unchanged">✅ No changes</div>
-					}
+					<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="0">
+						@if (g.IsNew)
+						{
+							<MudChip T="string" Color="Color.Info" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.NewReleases">
+								Will be created
+							</MudChip>
+						}
+						else if (g.ToAdd.Any() || g.ToRemove.Any())
+						{
+							<MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Build">
+								Has member changes
+							</MudChip>
+						}
+						else
+						{
+							<MudChip T="string" Color="Color.Success" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.CheckCircle">
+								No changes
+							</MudChip>
+						}
 
-					<div class="menu-ellipsis"
-						 @onclick="e => ToggleGroupMenuAsync(e, g.Name)" @onclick:stopPropagation>
-						⋯
-					</div>
+						<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopRight">
+							<MudMenuItem OnClick="() => ConfirmAddUser(g.Name)">
+								<MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2" /> Add User
+							</MudMenuItem>
+							<MudMenuItem OnClick="() => ConfirmRenameGroup(g.Name)">
+								<MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" /> Rename Group
+							</MudMenuItem>
+							<MudMenuItem OnClick="() => ConfirmDeleteAllUsersFromGroup(g.Name)" Color="Color.Error">
+								<MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-2" /> Delete All Users
+							</MudMenuItem>
+						</MudMenu>
+					</MudStack>
 				</div>
 			</div>
 
@@ -50,64 +80,39 @@
 				@foreach (var u in g.Users)
 				{
 					var isRemove = g.ToRemove.Any(r => NormalizePhone(r.PhoneNumber) == NormalizePhone(u.PhoneNumber));
-					<div class="whatsAppGroup-grid @(isRemove ? "user-remove" : "user-row") user-row @( _contextUserName == u.PhoneNumber && _contextUserMenuVisible && _contextGroupName == g.Name ? "menu-active" : "" )">
+					<div class="whatsAppGroup-grid @(isRemove ? "user-row user-remove" : "user-row")">
 						<div class="user-main">
-							<span>@u.Name</span>
-							@if (u.Name != u.PhoneNumber)
-							{
-								<span> @u.PhoneNumber </span>
-							}
+							@u.PhoneNumber
 							@if (u.Rank == "admin" || u.Rank == "creator")
 							{
-								<span>(@(string.IsNullOrEmpty(u.Rank) ? "" : char.ToUpper(u.Rank[0]) + u.Rank.Substring(1).ToLower()))</span>
+								<span> (@(string.IsNullOrEmpty(u.Rank) ? "" : char.ToUpper(u.Rank[0]) + u.Rank.Substring(1).ToLower())) </span>
+							}
+							@if (isRemove)
+							{
+								<span class="user-status user-status-remove">(Will be removed)</span>
 							}
 						</div>
 						@if (u.Rank != "creator")
 						{
-							<div class="menu-ellipsis"
-								 @onclick="e => ToggleUserMenuAsync(e, u.PhoneNumber, g.Name)"
-								 @onclick:stopPropagation>
-								⋯
-							</div>
+							<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopRight">
+								<MudMenuItem OnClick="() => ConfirmDeleteUser(u.PhoneNumber, g.Name)">
+									<MudIcon Icon="@Icons.Material.Filled.Delete" Class="mr-2" /> Delete User
+								</MudMenuItem>
+							</MudMenu>
 						}
 					</div>
 				}
 
 				@foreach (var u in g.ToAdd)
 				{
-					<div class="whatsAppGroup-grid user-add-preview">
-						<div class="user-main">@u.Name <span class="user-status user-status-add">(Will be added)</span></div>
-						<div class="user-details"><strong>Phone:</strong> @u.PhoneNumber</div>
+					<div class="whatsAppGroup-grid user-add-preview user-row">
+						<div class="user-main">@u.PhoneNumber <span class="user-status user-status-add">(Will be added)</span></div>
 					</div>
 				}
 			</div>
 		</div>
 	}
 </div>
-
-@if (_contextMenuVisible)
-{
-	<div class="context-menu" style="@($"top:{_contextMenuY}; left:{_contextMenuX};")">
-		<div class="context-item" @onclick="() => ConfirmAddUser(_contextGroupName)">
-			<i class="fa-solid user-plus"></i> Add User
-		</div>
-		<div class="context-item" @onclick="() => ConfirmRenameGroup(_contextGroupName)">
-			<i class="fa-solid fa-pen"></i> Rename Group
-		</div>
-		<div class="context-item delete" @onclick="() => ConfirmDeleteAllUsersFromGroup(_contextGroupName)">
-			<i class="fa-solid fa-trash"></i> Delete All Users
-		</div>
-	</div>
-}
-
-@if (_contextUserMenuVisible)
-{
-	<div class="context-menu" style="@($"top:{_contextUserMenuY}; left:{_contextUserMenuX};")">
-		<div class="context-item delete" @onclick="() => ConfirmDeleteUser(_contextUserName)">
-			<i class="fa-solid fa-trash"></i> Delete User
-		</div>
-	</div>
-}
 
 <PromptDialog Visible="@_modalVisible"
 			  VisibleChanged="@((bool v) => _modalVisible = v)"

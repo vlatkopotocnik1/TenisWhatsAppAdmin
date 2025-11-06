@@ -1,26 +1,29 @@
 ﻿@using System.Globalization
 @using CsvHelper
 @using CsvHelper.Configuration
+@using MudBlazor
 @using WhatsAppAdmin.Models
 @inject WhatsAppAdmin.Services.ImportStateService ImportState
-@inject IJSRuntime JS
 @inject WhatsAppAdmin.Services.IService Service
+@inject ISnackbar Snackbar
 
-<div class="toolbar">
-    <div class="import-actions">
-        <label class="btn-import btn-import-green" for="csvFile">
-            <span class="btn-icon">📁</span>
-            Import from CSV file
-        </label>
+<MudStack Row="true" Spacing="2" Class="mb-3">
 
-        <InputFile id="csvFile" style="display:none" OnChange="OnCsvSelected" />
+    <!-- Import from CSV -->
+    <MudButton Variant="Variant.Filled" Color="Color.Success" HtmlTag="label" For="csvFileInput">
+        <MudIcon Icon="@Icons.Material.Filled.UploadFile" Class="mr-2" />
+        Import from CSV file
+    </MudButton>
 
-        <button class="btn-import btn-import-green" @onclick="ImportFromService">
-            <span class="btn-icon">🔁</span>
-            Import from service
-        </button>
-    </div>    
-</div>
+    <InputFile id="csvFileInput" OnChange="OnCsvSelected" Style="display:none" />
+
+    <!-- Import from Service -->
+    <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="ImportFromService">
+        <MudIcon Icon="@Icons.Material.Filled.Sync" Class="mr-2" />
+        Import from Service
+    </MudButton>
+
+</MudStack>
 
 @code {
 
@@ -59,12 +62,12 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("showToast", $"CSV import failed: {ex.Message}", "error");
+            Snackbar.Add($"CSV import failed: {ex.Message}", Severity.Error);
         }
         finally
         {
             StateHasChanged();
-            await JS.InvokeVoidAsync("showToast", $"Imported {groups.Sum(g => g.Users.Count)} rows into {groups.Count} groups.", "success");
+            Snackbar.Add($"Imported {groups.Sum(g => g.Users.Count)} rows into {groups.Count} groups.", Severity.Success);
         }
     }
 
@@ -103,11 +106,11 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("showToast", $"Service import failed: {ex.Message}", "error");
+            Snackbar.Add($"Service import failed: {ex.Message}", Severity.Error);
         }
         finally
         {
-            await JS.InvokeVoidAsync("showToast", "Imported from service", "success");
+            Snackbar.Add("Imported from service", Severity.Success);
             StateHasChanged();
         }
     }
@@ -151,12 +154,8 @@
         return groups;
     }
 
-    private static string NormalizePhone(string phone)
+    public string NormalizePhone(string phoneNumber)
     {
-        if (string.IsNullOrWhiteSpace(phone)) return string.Empty;
-        phone = phone.Trim();
-        var leadingPlus = phone.StartsWith("+");
-        var digitsOnly = new string(phone.Where(char.IsDigit).ToArray());
-        return leadingPlus ? "+" + digitsOnly : digitsOnly;
+        return phoneNumber.Replace("+", "").Replace("@c.us", "").Trim();
     }
 }

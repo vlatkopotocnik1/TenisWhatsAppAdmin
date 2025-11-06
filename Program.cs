@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using MudBlazor;
 using MudBlazor.Services;
 using WhatsAppAdmin.Authentication;
 using WhatsAppAdmin.Services;
@@ -22,7 +23,16 @@ builder.Services.AddHttpClient<WhapiService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
 });
-builder.Services.AddMudServices();
+builder.Services.AddMudServices(config =>
+{
+    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+    config.SnackbarConfiguration.PreventDuplicates = false;
+    config.SnackbarConfiguration.NewestOnTop = false;
+    config.SnackbarConfiguration.ShowCloseIcon = true;
+    config.SnackbarConfiguration.VisibleStateDuration = 4000;
+    config.SnackbarConfiguration.HideTransitionDuration = 500;
+    config.SnackbarConfiguration.ShowTransitionDuration = 500;
+});
 builder.Services.AddSingleton<OverlayService>();
 
 

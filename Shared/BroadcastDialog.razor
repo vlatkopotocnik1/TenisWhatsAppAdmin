@@ -1,0 +1,65 @@
+﻿@using MudBlazor
+@using WhatsAppAdmin.Services
+@inject ISnackbar Snackbar
+@inject OverlayService OverlayService
+@inject WhapiService WhapiService
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_message" Label="Message" Lines="4" FullWidth="true" Variant="Variant.Outlined" />
+    </DialogContent>
+
+    <DialogActions>
+        <MudStack Row Justify="Justify.FlexEnd" Spacing="2">
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Primary" OnClick="Send">Send</MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public string? GroupId { get; set; }
+
+    private string _message = "";
+    private bool _toGroup = true;
+    private bool _toAllGroups;
+
+    private async Task Send()
+    {
+        if (string.IsNullOrWhiteSpace(_message))
+        {
+            Snackbar.Add("Message cannot be empty", Severity.Warning);
+            return;
+        }
+
+        await OverlayService.RunAsync(async () =>
+        {
+            try
+            {
+                if (_toAllGroups)
+                {
+                    var groups = await WhapiService.GetAllGroupsAsync();
+                    foreach (var g in groups)
+                    {
+                        var id = g.GetProperty("id").GetString();
+                        await WhapiService.SendMessageToGroupAsync(id!, _message);
+                    }
+                }
+                else if (_toGroup && GroupId is not null)
+                {
+                    await WhapiService.SendMessageToGroupAsync(GroupId, _message);
+                }
+
+                Snackbar.Add("Broadcast sent successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to send message: {ex.Message}", Severity.Error);
+            }
+        }, "Sending broadcast...");
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using MudBlazor;
 using WhatsAppAdmin.Models;
 using WhatsAppAdmin.Services;
 using WhatsAppAdmin.Shared;
@@ -18,7 +19,8 @@ namespace WhatsAppAdmin.Pages
         private List<WhatsAppGroup> _whatsAppGroups = [];
 
         private bool _contextMenuVisible, _contextUserMenuVisible;
-        private string _contextMenuX = "0px", _contextMenuY = "0px";
+        private readonly string _contextMenuX = "0px";
+        private readonly string _contextMenuY = "0px";
         private string _contextUserMenuX = "0px", _contextUserMenuY = "0px";
         private string _contextGroupName = String.Empty, _contextUserName = String.Empty;
 
@@ -211,9 +213,6 @@ namespace WhatsAppAdmin.Pages
             return "unchanged";
         }
 
-        private static string NormalizePhone(string phone) =>
-            phone.Replace("+", "").Replace("@c.us", "").Trim();
-
         private void HideContextMenu()
         {
             _contextMenuVisible = _contextUserMenuVisible = false;
@@ -392,13 +391,13 @@ namespace WhatsAppAdmin.Pages
         }
 
         // 🗑️ Delete User
-        private void ConfirmDeleteUser(string? phoneNumber)
+        private void ConfirmDeleteUser(string phoneNumber, string groupName)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber)) return;
             _contextUserMenuVisible = false;
             ShowModal(
                 "Delete User",
-                $"Are you sure you want to delete <strong>{phoneNumber}</strong> from <strong>{_contextGroupName}</strong>?",
+                $"Are you sure you want to delete <strong>{phoneNumber}</strong> from <strong>{groupName}</strong>?",
                 null,
                 [
                     new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
@@ -562,44 +561,16 @@ namespace WhatsAppAdmin.Pages
             }, "Deleting all groups on Whatsapp");
         }
 
-        private async Task ToggleGroupMenuAsync(MouseEventArgs e, string name)
+        private void OpenBroadcastAllDialog()
         {
-            if (_contextGroupName == name && _contextMenuVisible)
-            {
-                _contextMenuVisible = false;
-            }
-            else
-            {
-                _contextMenuVisible = true;
-                _contextUserMenuVisible = false;
-                var pos = await JS.InvokeAsync<MenuPosition>("adjustContextMenuPosition", e.ClientX, e.ClientY);
-                _contextMenuX = $"{pos.X}px";
-                _contextMenuY = $"{pos.Y}px";
-                _contextGroupName = name;
-            }
-            StateHasChanged();
+            var parameters = new DialogParameters { ["GroupId"] = "1" };
+            var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+            DialogService.ShowAsync<BroadcastDialog>("Broadcast to All Groups", parameters, options);
         }
 
-        private async Task ToggleUserMenuAsync(MouseEventArgs e, string userPhone, string groupName)
+        public string NormalizePhone(string phoneNumber)
         {
-            if (_contextUserName == userPhone && _contextUserMenuVisible && _contextGroupName == groupName)
-            {
-                _contextUserMenuVisible = false;
-            }
-            else
-            {
-                _contextUserMenuVisible = true;
-                _contextMenuVisible = false;
-                var pos = await JS.InvokeAsync<MenuPosition>("adjustContextMenuPosition", e.ClientX, e.ClientY);
-                _contextUserMenuX = $"{pos.X}px";
-                _contextUserMenuY = $"{pos.Y}px";
-
-                // store them separately
-                _contextUserName = userPhone; // now stores phone only
-                _contextGroupName = groupName;
-            }
-            StateHasChanged();
+            return phoneNumber.Replace("+", "").Replace("@c.us", "").Trim();
         }
-
     }
 }

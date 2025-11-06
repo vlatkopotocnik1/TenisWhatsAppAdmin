@@ -23,7 +23,7 @@
     border-radius: 10px 10px 0px 0px;
     font-weight: bold;
     text-transform: uppercase;
-    padding: 10px 14px;
+    padding-left: 10px;
     font-size: 1rem;
     border-bottom: 3px solid rgba(0,0,0,0.1);
     display: flex;
@@ -48,31 +48,6 @@
     flex-shrink: 0;
 }
 
-.group-status-badge {
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-}
-
-.group-status-new {
-    background: linear-gradient(to right, #43a047, #2e7d32);
-    color: #fff;
-}
-
-.group-status-changed {
-    background: linear-gradient(to right, #f39c12, #e67e22);
-    color: #fff;
-}
-
-.group-status-unchanged {
-    background: #8c8c8c;
-    color: #fff;
-}
 
 .delete-group-btn {
     background: #dc3545;
@@ -196,7 +171,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 10px;
+    line-height: 2.2rem; /* or same as others */
+    vertical-align: middle;
     border-bottom: 1px solid #eee;
     transition: background-color 0.15s ease;
 }
@@ -426,6 +402,7 @@
 
 .user-main {
     display: flex;
+    padding-left: 10px;
     gap: 6px;
     align-items: center;
     font-size: 0.95rem;
