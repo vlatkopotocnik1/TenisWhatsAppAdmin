@@ -7,27 +7,37 @@
 @attribute [Authorize]
 <PageTitle>Index</PageTitle>
 
-<Toolbar />
 
-@if (_whatsAppGroups.Count != 0)
-{
-	<div style="margin-bottom:10px;">
-		<MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SyncGroupsOnWhatsApp">
-			<MudIcon Icon="@Icons.Material.Filled.Sync" Class="me-2" />
-			Sync WhatsApp Groups
-		</MudButton>
+<MudPaper Class="d-flex align-center justify-space-between mb-3 p-2" Elevation="1">
 
-		<MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="DeleteAllGroupsFromWhatsApp">
-			<MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="me-2" />
-			Delete All WhatsApp Groups
-		</MudButton>
+	<MudMenu>
+		<ActivatorContent>
+			<MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Menu">
+				Admin Actions
+			</MudButton>
+		</ActivatorContent>
 
-		<MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="OpenBroadcastAllDialog">
-			<MudIcon Icon="@Icons.Material.Filled.Campaign" Class="me-2" />
-			Broadcast to All Groups
-		</MudButton>
-	</div>
-}
+		<ChildContent>
+			<MudMenuItem OnClick="@SyncGroupsOnWhatsApp">
+				<MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-2" /> Sync WhatsApp
+			</MudMenuItem>
+			<MudDivider />
+			<MudMenuItem OnClick="@DeleteAllGroupsFromWhatsApp">
+				<MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-2" /> Delete All Groups
+			</MudMenuItem>
+		</ChildContent>
+	</MudMenu>
+
+	<Toolbar />
+
+	<MudButton Variant="Variant.Outlined"
+			   Color="Color.Secondary"
+			   StartIcon="@Icons.Material.Filled.Campaign"
+			   OnClick="@OpenBroadcastAllDialog">
+		Broadcast
+	</MudButton>
+
+</MudPaper>
 
 <div class="whatsAppGroups-board">
 	@foreach (var g in _whatsAppGroups)
@@ -39,26 +49,29 @@
 					<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="0">
 						@if (g.IsNew)
 						{
-							<MudChip T="string" Color="Color.Info" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.NewReleases">
+							<MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.NewReleases">
 								Will be created
 							</MudChip>
 						}
 						else if (g.ToAdd.Any() || g.ToRemove.Any())
 						{
-							<MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Build">
+							<MudChip T="string" Color="Color.Warning" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Build">
 								Has member changes
 							</MudChip>
 						}
 						else
 						{
-							<MudChip T="string" Color="Color.Success" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.CheckCircle">
+							<MudChip T="string" Color="Color.Success" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.CheckCircle">
 								No changes
 							</MudChip>
 						}
 
-						<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopRight">
+						<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
 							<MudMenuItem OnClick="() => ConfirmAddUser(g.Name)">
 								<MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2" /> Add User
+							</MudMenuItem>
+							<MudMenuItem OnClick="() => OpenBroadcastSingleDialog(g.Id, g.Name)">
+								<MudIcon Icon="@Icons.Material.Filled.Campaign" Class="mr-2" /> Send message into group
 							</MudMenuItem>
 							<MudMenuItem OnClick="() => ConfirmRenameGroup(g.Name)">
 								<MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" /> Rename Group
@@ -94,7 +107,7 @@
 						</div>
 						@if (u.Rank != "creator")
 						{
-							<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopRight">
+							<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
 								<MudMenuItem OnClick="() => ConfirmDeleteUser(u.PhoneNumber, g.Name)">
 									<MudIcon Icon="@Icons.Material.Filled.Delete" Class="mr-2" /> Delete User
 								</MudMenuItem>

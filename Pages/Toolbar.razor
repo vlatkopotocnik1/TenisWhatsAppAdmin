@@ -10,7 +10,7 @@
 <MudStack Row="true" Spacing="2" Class="mb-3">
 
     <!-- Import from CSV -->
-    <MudButton Variant="Variant.Filled" Color="Color.Success" HtmlTag="label" For="csvFileInput">
+    <MudButton Variant="Variant.Outlined" Color="Color.Success" HtmlTag="label" For="csvFileInput">
         <MudIcon Icon="@Icons.Material.Filled.UploadFile" Class="mr-2" />
         Import from CSV file
     </MudButton>
@@ -18,7 +18,7 @@
     <InputFile id="csvFileInput" OnChange="OnCsvSelected" Style="display:none" />
 
     <!-- Import from Service -->
-    <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="ImportFromService">
+    <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="ImportFromService">
         <MudIcon Icon="@Icons.Material.Filled.Sync" Class="mr-2" />
         Import from Service
     </MudButton>
@@ -64,7 +64,11 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"CSV import failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"CSV import failed: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
         }
         finally
         {

@@ -183,8 +183,8 @@ namespace WhatsAppAdmin.Services
         // send a text message to a group (groupId or groupName depending on API)
         public async Task SendMessageToGroupAsync(string groupId, string message)
         {
-            var payload = new { id = groupId, message };
-            var resp = await _http.PostAsJsonAsync("/groups/sendMessage", payload);
+            var payload = new { to = groupId, body = message};
+            var resp = await _http.PostAsJsonAsync("/messages/text", payload);
             await EnsureSuccess(resp);
         }
 

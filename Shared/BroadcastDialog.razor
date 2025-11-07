@@ -20,11 +20,10 @@
 @code {
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; }
-    [Parameter] public string? GroupId { get; set; }
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public bool ToAllGroups { get; set; }
 
     private string _message = "";
-    private bool _toGroup = true;
-    private bool _toAllGroups;
 
     private async Task Send()
     {
@@ -38,7 +37,7 @@
         {
             try
             {
-                if (_toAllGroups)
+                if (ToAllGroups)
                 {
                     var groups = await WhapiService.GetAllGroupsAsync();
                     foreach (var g in groups)
@@ -47,16 +46,20 @@
                         await WhapiService.SendMessageToGroupAsync(id!, _message);
                     }
                 }
-                else if (_toGroup && GroupId is not null)
+                else if (Id is not null)
                 {
-                    await WhapiService.SendMessageToGroupAsync(GroupId, _message);
+                    await WhapiService.SendMessageToGroupAsync(Id, _message);
                 }
-
+                MudDialog.Close(DialogResult.Ok(true));
                 Snackbar.Add("Broadcast sent successfully", Severity.Success);
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Failed to send message: {ex.Message}", Severity.Error);
+                Snackbar.Add($"Failed to send message: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
             }
         }, "Sending broadcast...");
     }

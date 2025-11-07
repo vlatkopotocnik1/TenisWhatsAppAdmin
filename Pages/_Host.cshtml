@@ -14,14 +14,8 @@
     <link href="WhatsAppAdmin.styles.css" rel="stylesheet" />
     <link href="css/table.css" rel="stylesheet" />
     <link rel="icon" type="image/png" href="favicon.png"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf/notyf.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@fortawesome/fontawesome-free@6.5.0/css/all.min.css">
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-
     <script src="~/js/site.js"></script>
     <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered" />
 </head>
@@ -40,44 +34,5 @@
     </div>
 
     <script src="_framework/blazor.server.js"></script>
-    <script>
-        window.showCustomContextMenu = function (event) {
-            event.preventDefault(); // block browser menu only on right-click targets
-        };
-
-                window.showToast = (message, type) => {
-            let background = "linear-gradient(to right, #00b09b, #96c93d)";
-
-            switch (type) {
-                case "success":
-                    background = "linear-gradient(to right, #00b09b, #96c93d)";
-                    break;
-                case "error":
-                    background = "linear-gradient(to right, #ff5f6d, #ffc371)";
-                    break;
-                case "warning":
-                    background = "linear-gradient(to right, #f7971e, #ffd200)";
-                    break;
-                case "info":
-                default:
-                    background = "linear-gradient(to right, #56ccf2, #2f80ed)";
-                    break;
-            }
-
-            Toastify({
-                text: message,
-                duration: 4000,
-                close: true,
-                gravity: "bottom", // top or bottom
-                position: "right", // left, center, right
-                stopOnFocus: true,
-                style: {
-                    background: background,
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
-                }
-            }).showToast();
-        };
-    </script>
 </body>
 </html>

@@ -1,7 +1,5 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
 using MudBlazor;
 using WhatsAppAdmin.Models;
 using WhatsAppAdmin.Services;
@@ -12,9 +10,9 @@ namespace WhatsAppAdmin.Pages
     public partial class Index : IDisposable
     {
         [Inject] private ImportStateService ImportState { get; set; } = default!;
-        [Inject] private IJSRuntime JS { get; set; } = default!;
         [Inject] private WhapiService WhapiService { get; set; } = default!;
         [Inject] private OverlayService OverlayService { get; set; } = null!;
+        [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
         private List<WhatsAppGroup> _whatsAppGroups = [];
 
@@ -105,7 +103,11 @@ namespace WhatsAppAdmin.Pages
                 }
                 catch (Exception ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to refresh groups: {ex.Message}", "error");
+                    Snackbar.Add($"❌ Failed to refresh groups: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;  
+                        config.ShowCloseIcon = true;       
+                    });
                 }
             }, "Loading");
         }
@@ -287,7 +289,7 @@ namespace WhatsAppAdmin.Pages
                 if (group.IsNew)
                 {
                     group.Name = newName;
-                    await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName} (local only)", "info");
+                    Snackbar.Add($"✅ Group renamed to {newName} (local only)", Severity.Info);
                     return;
                 }
 
@@ -297,10 +299,15 @@ namespace WhatsAppAdmin.Pages
                 }
                 catch(Exception ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to rename group: {ex.Message}", "error");
+                    Snackbar.Add($"❌ Failed to rename group: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
                 }
                 group.Name = newName;
-                await JS.InvokeVoidAsync("showToast", $"✅ Group renamed to {newName}", "success");
+
+                Snackbar.Add($"✅ Group renamed to {newName}", Severity.Success);
                 await RefreshGroupsFromWhatsAppAsync();
             }, $"Renaming");
         }
@@ -335,7 +342,7 @@ namespace WhatsAppAdmin.Pages
 
                 if (ifExistingUser != null)
                 {
-                    await JS.InvokeVoidAsync("showToast", $"⚠️ User {phone} is already in {groupName}", "warning");
+                    Snackbar.Add($"⚠️ User {phone} is already in {groupName}", Severity.Warning);
                     return;
                 }
 
@@ -349,7 +356,7 @@ namespace WhatsAppAdmin.Pages
                 if (group.IsNew)
                 {
                     group.Users.Add(newUser);
-                    await JS.InvokeVoidAsync("showToast", $"✅ Added {phone} to {groupName} (local only)", "info");
+                    Snackbar.Add($"✅ Added {phone} to {groupName} (local only)", Severity.Info);
                     return;
                 }
 
@@ -360,9 +367,13 @@ namespace WhatsAppAdmin.Pages
 
                 catch(Exception ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to add user to group: {ex.Message}", "error");
+                    Snackbar.Add($"❌ Failed to add user to group: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
                 }
-                await JS.InvokeVoidAsync("showToast", $"✅ User {phone} added to {groupName}", "success");
+                Snackbar.Add($"✅ User {phone} added to {groupName}", Severity.Success);
                 await RefreshGroupsFromWhatsAppAsync();
             }, "Adding user");
         }
@@ -391,7 +402,7 @@ namespace WhatsAppAdmin.Pages
                 if (group.IsNew)
                 {
                     _whatsAppGroups.Remove(group);
-                    await JS.InvokeVoidAsync("showToast", $"✅ Users from group '{groupName}' removed", "info");
+                    Snackbar.Add($"✅ Users from group '{groupName}' removed  (local only)", Severity.Info);
                     return;
                 }
 
@@ -401,15 +412,23 @@ namespace WhatsAppAdmin.Pages
                 }
                 catch (InvalidOperationException ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                    Snackbar.Add(ex.Message, Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
                     return;
                 }
                 catch (Exception ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to delete all users from group: {ex.Message}", "error");
+                    Snackbar.Add($"❌ Failed to delete all users from group: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
                     return;
                 }
-                await JS.InvokeVoidAsync("showToast", $"✅ Users deleted from '{groupName}'", "error");
+                Snackbar.Add($"✅ Users deleted from '{groupName}'", Severity.Error);
                 await RefreshGroupsFromWhatsAppAsync(true);
             }, $"Deleting users");
         }
@@ -440,7 +459,7 @@ namespace WhatsAppAdmin.Pages
                 if (userInToAdd != null)
                 {
                     group.ToAdd.Remove(userInToAdd);
-                    await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "info");
+                    Snackbar.Add($"✅ User {phoneNumber} removed (local only)", Severity.Info);
                     return;
                 }
 
@@ -451,7 +470,7 @@ namespace WhatsAppAdmin.Pages
                 if (group.IsNew)
                 {
                     group.Users.Remove(user);
-                    await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "info");
+                    Snackbar.Add($"✅ User {phoneNumber} removed (local only)", Severity.Info);
                     return;
                 }
 
@@ -461,15 +480,19 @@ namespace WhatsAppAdmin.Pages
                 }
                 catch (InvalidOperationException ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                    Snackbar.Add(ex.Message, Severity.Error);
                     return;
                 }
                 catch(Exception ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", $"❌ Failed to delete user from group: {ex.Message}", "error");
+                    Snackbar.Add($"❌ Failed to delete user from group: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
                 }
                 group.Users.Remove(user);
-                await JS.InvokeVoidAsync("showToast", $"✅ User {phoneNumber} removed", "success");
+                Snackbar.Add($"✅ User {phoneNumber} removed", Severity.Error);
             }, "Deleting user");
         }
 
@@ -498,7 +521,7 @@ namespace WhatsAppAdmin.Pages
                             // create group
                             var phones = group.Users.Select(u => u.PhoneNumber).ToList();
                             group.Id = await WhapiService.CreateGroupAsync(group.Name, phones);
-                            await JS.InvokeVoidAsync("showToast", $"✅ Created new group '{group.Name}'", "success");
+                            Snackbar.Add($"✅ Created new group '{group.Name}'", Severity.Success);
                         }
                         else
                         {
@@ -506,7 +529,7 @@ namespace WhatsAppAdmin.Pages
                             if (group.ToAdd.Count != 0)
                             {
                                 await WhapiService.AddParticipantsAsync(group.Id, group.ToAdd.Select(u => u.PhoneNumber));
-                                await JS.InvokeVoidAsync("showToast", $"✅ Added {group.ToAdd.Count} users to '{group.Name}'", "success");
+                                Snackbar.Add($"✅ Added {group.ToAdd.Count} users to '{group.Name}'", Severity.Success);
                             }
 
                             if (group.ToRemove.Count != 0)
@@ -517,20 +540,28 @@ namespace WhatsAppAdmin.Pages
                                 }
                                 catch (Exception ex)
                                 {
-                                    await JS.InvokeVoidAsync("showToast", ex.Message, "error");
+                                    Snackbar.Add(ex.Message, Severity.Error, config =>
+                                    {
+                                        config.RequireInteraction = true;
+                                        config.ShowCloseIcon = true;
+                                    });
                                     break;
                                 }
-                                await JS.InvokeVoidAsync("showToast", $"⚠️ Removed {group.ToRemove.Count} users from '{group.Name}'", "error");
+                                Snackbar.Add($"⚠️ Removed {group.ToRemove.Count} users from '{group.Name}'", Severity.Error);
                             }
                         }
                     }
 
-                    await JS.InvokeVoidAsync("showToast", "✅ Sync complete.", "success");
+                    Snackbar.Add("✅ Sync complete.", Severity.Success);
                     await RefreshGroupsFromWhatsAppAsync();
                 }
                 catch (Exception ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", $"❌ Error during sync: {ex.Message}", "error");
+                    Snackbar.Add($"❌ Error during sync: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
                 }
                 finally
                 {
@@ -554,28 +585,36 @@ namespace WhatsAppAdmin.Pages
                     {
                         current++;
 
-                        await JS.InvokeVoidAsync("showToast", $"Deleting group {current}/{total}: {group.Name}", "error");
+                        Snackbar.Add($"Deleting group {current}/{total}: {group.Name}", Severity.Error);
                         StateHasChanged();
 
                         try
                         {
                             await WhapiService.SafeDeleteGroupAsync(group.Id);
 
-                            await JS.InvokeVoidAsync("showToast", $"✅ Deleted '{group.Name}'", "error");
+                            Snackbar.Add($"✅ Deleted '{group.Name}'", Severity.Error);
                         }
                         catch (Exception ex)
                         {
-                            await JS.InvokeVoidAsync("showToast", $"❌ Failed to delete '{group.Name}': {ex.Message}", "error");
+                            Snackbar.Add($"❌ Failed to delete '{group.Name}': {ex.Message}", Severity.Error, config =>
+                            {
+                                config.RequireInteraction = true;
+                                config.ShowCloseIcon = true;
+                            });
                         }
 
                         await Task.Delay(300); // slight delay to avoid hitting rate limits
                     }
 
-                    await JS.InvokeVoidAsync("showToast", "All groups processed.", "success");
+                    Snackbar.Add("All groups processed.", Severity.Success);
                 }
                 catch (Exception ex)
                 {
-                    await JS.InvokeVoidAsync("showToast", $"❌ Fatal error: {ex.Message}", "error");
+                    Snackbar.Add($"❌ Fatal error: {ex.Message}", Severity.Error, config =>
+                    {
+                        config.RequireInteraction = true;
+                        config.ShowCloseIcon = true;
+                    });
                 }
                 finally
                 {
@@ -586,9 +625,16 @@ namespace WhatsAppAdmin.Pages
 
         private void OpenBroadcastAllDialog()
         {
-            var parameters = new DialogParameters { ["GroupId"] = "1" };
+            var parameters = new DialogParameters { ["ToAllGroups"] = true };
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
             DialogService.ShowAsync<BroadcastDialog>("Broadcast to All Groups", parameters, options);
+        }
+
+        private void OpenBroadcastSingleDialog(string id, string name)
+        {
+            var parameters = new DialogParameters { ["ToAllGroups"] = false, ["Id"] = id };
+            var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+            DialogService.ShowAsync<BroadcastDialog>($"Broadcast to {name}", parameters, options);
         }
     }
 }
