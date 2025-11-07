@@ -66,8 +66,42 @@ namespace WhatsAppAdmin.Pages
                 await Task.Delay(1000);
                 try
                 {
+                    // 1️⃣ Load contacts.json
+                    var contactsFile = Path.Combine(AppContext.BaseDirectory, "contacts.json");
+                    var contacts = new List<User>();
+
+                    if (File.Exists(contactsFile))
+                    {
+                        var json = await File.ReadAllTextAsync(contactsFile);
+                        contacts = System.Text.Json.JsonSerializer.Deserialize<List<User>>(json) ?? new();
+                    }
+
+                    // 2️⃣ Convert contacts to a dictionary for fast lookup
+                    var phoneToName = contacts
+                        .Where(c => !string.IsNullOrWhiteSpace(c.PhoneNumber))
+                        .ToDictionary(
+                            c => MainLayout.NormalizePhone(c.PhoneNumber),
+                            c => c.Name,
+                            StringComparer.OrdinalIgnoreCase
+                        );
+
+                    // 3️⃣ Fetch groups from WhatsApp
                     var groupsFromWhatsApp = await WhapiService.GetAllGroupsAsync();
-                    _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp, isAfterDeleteAllUsers);
+
+                    // 4️⃣ Convert and enrich with names from contacts.json
+                    _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp, isAfterDeleteAllUsers)
+                        .Select(g =>
+                        {
+                            g.Users = g.Users.Select(u =>
+                            {
+                                var normalizedPhone = MainLayout.NormalizePhone(u.PhoneNumber);
+                                if (phoneToName.TryGetValue(normalizedPhone, out var mappedName))
+                                    u.Name = mappedName; // replace name from contacts.json
+
+                                return u;
+                            }).ToList();
+                            return g;
+                        }).ToList();
                 }
                 catch (Exception ex)
                 {
@@ -170,19 +204,19 @@ namespace WhatsAppAdmin.Pages
                 {
                     // ✅ Existing — compare and merge users
                     var normalizedExisting = match.Users
-                        .Select(u => NormalizePhone(u.PhoneNumber))
+                        .Select(u => MainLayout.NormalizePhone(u.PhoneNumber))
                         .ToHashSet();
 
                     var normalizedImported = importedGroup.Users
-                        .Select(u => NormalizePhone(u.PhoneNumber))
+                        .Select(u => MainLayout.NormalizePhone(u.PhoneNumber))
                         .ToHashSet();
 
                     var toAdd = importedGroup.Users
-                        .Where(u => !normalizedExisting.Contains(NormalizePhone(u.PhoneNumber)))
+                        .Where(u => !normalizedExisting.Contains(MainLayout.NormalizePhone(u.PhoneNumber)))
                         .ToList();
 
                     var toRemove = match.Users
-                        .Where(u => !normalizedImported.Contains(NormalizePhone(u.PhoneNumber)))
+                        .Where(u => !normalizedImported.Contains(MainLayout.NormalizePhone(u.PhoneNumber)))
                         .ToList();
 
                     match.ToAdd = toAdd;
@@ -297,7 +331,7 @@ namespace WhatsAppAdmin.Pages
                 var group = _whatsAppGroups.FirstOrDefault(g => g.Name == groupName);
                 if (group == null) return;
 
-                var ifExistingUser = group.Users.FirstOrDefault(u => string.Equals(u.PhoneNumber, NormalizePhone(phone).Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
+                var ifExistingUser = group.Users.FirstOrDefault(u => string.Equals(u.PhoneNumber, MainLayout.NormalizePhone(phone).Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
 
                 if (ifExistingUser != null)
                 {
@@ -555,11 +589,6 @@ namespace WhatsAppAdmin.Pages
             var parameters = new DialogParameters { ["GroupId"] = "1" };
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
             DialogService.ShowAsync<BroadcastDialog>("Broadcast to All Groups", parameters, options);
-        }
-
-        public string NormalizePhone(string phoneNumber)
-        {
-            return phoneNumber.Replace("+", "").Replace("@c.us", "").Trim();
         }
     }
 }

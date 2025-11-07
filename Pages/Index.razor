@@ -79,10 +79,10 @@
 
 				@foreach (var u in g.Users)
 				{
-					var isRemove = g.ToRemove.Any(r => NormalizePhone(r.PhoneNumber) == NormalizePhone(u.PhoneNumber));
+					var isRemove = g.ToRemove.Any(r => MainLayout.NormalizePhone(r.PhoneNumber) == MainLayout.NormalizePhone(u.PhoneNumber));
 					<div class="whatsAppGroup-grid @(isRemove ? "user-row user-remove" : "user-row")">
 						<div class="user-main">
-							@u.PhoneNumber
+							@u.Name @u.PhoneNumber
 							@if (u.Rank == "admin" || u.Rank == "creator")
 							{
 								<span> (@(string.IsNullOrEmpty(u.Rank) ? "" : char.ToUpper(u.Rank[0]) + u.Rank.Substring(1).ToLower())) </span>

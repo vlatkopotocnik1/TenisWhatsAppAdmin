@@ -49,4 +49,13 @@
 	{
 		GlobalEvents.RaiseHideContextMenu();
 	}
+	public static string NormalizePhone(string phoneNumber)
+	{
+		return phoneNumber
+			.Replace(" ", "")
+			.Replace("+", "")
+			.Replace("@c.us", "")
+			.Trim();
+	}
+
 }

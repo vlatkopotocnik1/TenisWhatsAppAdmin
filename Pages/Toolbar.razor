@@ -59,6 +59,8 @@
             // store into import state (in-memory)
             ImportState.SetGroups(groups);
 
+            // ✅ Automatically save users after import
+            await SaveContactsToFile(groups);
         }
         catch (Exception ex)
         {
@@ -135,7 +137,7 @@
             if (string.IsNullOrWhiteSpace(groupName) && string.IsNullOrWhiteSpace(userName)) continue;
 
             // normalize phone minimally
-            string phone = NormalizePhone(phoneRaw);
+            string phone = MainLayout.NormalizePhone(phoneRaw);
 
             var group = groups.FirstOrDefault(g => string.Equals(g.Name, groupName, StringComparison.OrdinalIgnoreCase));
             if (group == null)
@@ -154,8 +156,63 @@
         return groups;
     }
 
-    public string NormalizePhone(string phoneNumber)
+    private async Task SaveContactsToFile(List<WhatsAppGroup> groups)
     {
-        return phoneNumber.Replace("+", "").Replace("@c.us", "").Trim();
+        try
+        {
+            var contactsPath = Path.Combine(AppContext.BaseDirectory, "contacts.json");
+
+            // 1️⃣ Load existing contacts (if file exists)
+            List<SimpleContact> existingContacts = new();
+            if (File.Exists(contactsPath))
+            {
+                var json = await File.ReadAllTextAsync(contactsPath);
+                existingContacts = System.Text.Json.JsonSerializer.Deserialize<List<SimpleContact>>(json) ?? new List<SimpleContact>();
+            }
+
+            // 2️⃣ Extract new contacts (ignore everything except Name + Phone)
+            var newContacts = groups
+                .SelectMany(g => g.Users)
+                .Where(u => !string.IsNullOrWhiteSpace(u.Name) && !string.IsNullOrWhiteSpace(u.PhoneNumber))
+                .Select(u => new SimpleContact
+                {
+                    Name = u.Name.Trim(),
+                    PhoneNumber = MainLayout.NormalizePhone(u.PhoneNumber)
+                })
+                .ToList();
+
+            // 3️⃣ Merge: update phone if name exists, otherwise add
+            foreach (var contact in newContacts)
+            {
+                var existing = existingContacts.FirstOrDefault(c =>
+                    string.Equals(c.Name, contact.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                {
+                    existing.PhoneNumber = contact.PhoneNumber;
+                }
+                else
+                {
+                    existingContacts.Add(contact);
+                }
+            }
+
+            // 4️⃣ Sort alphabetically by name
+            existingContacts = existingContacts
+                .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            // 5️⃣ Save back to JSON file
+            var mergedJson = System.Text.Json.JsonSerializer.Serialize(existingContacts, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            await File.WriteAllTextAsync(contactsPath, mergedJson);
+
+        }
+        catch
+        {
+        }
     }
 }
