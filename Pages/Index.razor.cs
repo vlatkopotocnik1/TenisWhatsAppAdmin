@@ -623,18 +623,21 @@ namespace WhatsAppAdmin.Pages
             }, "Deleting all groups on Whatsapp");
         }
 
-        private void OpenBroadcastAllDialog()
+        private void OpenBroadcastDialog(string? id = null, string? name = null)
         {
-            var parameters = new DialogParameters { ["ToAllGroups"] = true };
+            var title = string.IsNullOrWhiteSpace(id) ? "Broadcast to all groups" : $"Send message to {name}";
+            var parameters = new DialogParameters();
+            if(string.IsNullOrWhiteSpace(id))
+            {
+                parameters["ToAllGroups"] = true;
+            }
+            else
+            {
+                parameters["ToAllGroups"] = false;
+                parameters["Id"] = id;
+            }
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-            DialogService.ShowAsync<BroadcastDialog>("Broadcast to all groups", parameters, options);
-        }
-
-        private void OpenBroadcastSingleDialog(string id, string name)
-        {
-            var parameters = new DialogParameters { ["ToAllGroups"] = false, ["Id"] = id };
-            var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-            DialogService.ShowAsync<BroadcastDialog>($"Send message to {name}", parameters, options);
+            DialogService.ShowAsync<BroadcastDialog>(title, parameters, options);
         }
     }
 }

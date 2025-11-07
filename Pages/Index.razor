@@ -33,7 +33,7 @@
 	<MudButton Variant="Variant.Outlined"
 			   Color="Color.Secondary"
 			   StartIcon="@Icons.Material.Filled.Campaign"
-			   OnClick="@OpenBroadcastAllDialog">
+			   OnClick="() => OpenBroadcastDialog()">
 		Broadcast
 	</MudButton>
 
@@ -66,18 +66,18 @@
 							</MudChip>
 						}
 
-						<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+						<MudMenu Size="Size.Small" Class="menu-ellipsis modern-menu" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
 							<MudMenuItem OnClick="() => ConfirmAddUser(g.Name)">
-								<MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2" /> Add User
+								<MudIcon Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary" Class="mr-2" /> Add User
 							</MudMenuItem>
-							<MudMenuItem OnClick="() => OpenBroadcastSingleDialog(g.Id, g.Name)">
-								<MudIcon Icon="@Icons.Material.Filled.Campaign" Class="mr-2" /> Send message into group
+							<MudMenuItem OnClick="() => OpenBroadcastDialog(g.Id, g.Name)">
+								<MudIcon Icon="@Icons.Material.Filled.Campaign" Color="Color.Info" Class="mr-2" /> Send Message
 							</MudMenuItem>
 							<MudMenuItem OnClick="() => ConfirmRenameGroup(g.Name)">
-								<MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" /> Rename Group
+								<MudIcon Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" Class="mr-2" /> Rename Group
 							</MudMenuItem>
 							<MudMenuItem OnClick="() => ConfirmDeleteAllUsersFromGroup(g.Name)" Color="Color.Error">
-								<MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-2" /> Delete All Users
+								<MudIcon Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Error" Class="mr-2" /> Delete All Users
 							</MudMenuItem>
 						</MudMenu>
 					</MudStack>
@@ -107,12 +107,15 @@
 						</div>
 						@if (u.Rank != "creator")
 						{
-							<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
-								<MudMenuItem OnClick="() => OpenBroadcastSingleDialog(u.PhoneNumber, string.IsNullOrEmpty(u.Name) ? u.Name : u.PhoneNumber)">
-									<MudIcon Icon="@Icons.Material.Filled.Campaign" Class="mr-2" /> Send message to user
+							<MudMenu Size="Size.Small" Class="menu-ellipsis modern-menu" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+								<MudMenuItem OnClick="() => OpenBroadcastDialog(u.PhoneNumber, string.IsNullOrEmpty(u.Name) ? u.PhoneNumber : u.Name)">
+									<MudIcon Icon="@Icons.Material.Filled.Campaign" Color="Color.Info" Class="mr-2" />
+									Send message to user
 								</MudMenuItem>
-								<MudMenuItem OnClick="() => ConfirmDeleteUser(u.PhoneNumber, g.Name)">
-									<MudIcon Icon="@Icons.Material.Filled.Delete" Class="mr-2" /> Delete user
+
+								<MudMenuItem OnClick="() => ConfirmDeleteUser(u.PhoneNumber, g.Name)" Color="Color.Error">
+									<MudIcon Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Class="mr-2" />
+									Delete user
 								</MudMenuItem>
 							</MudMenu>
 						}

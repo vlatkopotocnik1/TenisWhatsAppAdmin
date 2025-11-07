@@ -43,15 +43,30 @@
                     foreach (var g in groups)
                     {
                         var id = g.GetProperty("id").GetString();
-                        await WhapiService.SendMessageToGroupAsync(id!, _message);
+                        try
+                        {
+                            await WhapiService.SendMessageToGroupAsync(id!, _message);
+                            Snackbar.Add($"Message sent successfully to {id}", Severity.Success);
+                        }
+                        catch (Exception ex)
+                        {
+                            Snackbar.Add($"Failed to send to {id}: {ex.Message}", Severity.Error);
+                        }
                     }
                 }
                 else if (Id is not null)
                 {
-                    await WhapiService.SendMessageToGroupAsync(Id, _message);
+                    try
+                    {
+                        await WhapiService.SendMessageToGroupAsync(Id!, _message);
+                        Snackbar.Add($"Message sent successfully to {Id}", Severity.Success);
+                    }
+                    catch (Exception ex)
+                    {
+                        Snackbar.Add($"Failed to send to {Id}: {ex.Message}", Severity.Error);
+                    }
                 }
                 MudDialog.Close(DialogResult.Ok(true));
-                Snackbar.Add("Broadcast sent successfully", Severity.Success);
             }
             catch (Exception ex)
             {
