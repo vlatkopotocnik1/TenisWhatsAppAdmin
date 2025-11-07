@@ -627,14 +627,14 @@ namespace WhatsAppAdmin.Pages
         {
             var parameters = new DialogParameters { ["ToAllGroups"] = true };
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-            DialogService.ShowAsync<BroadcastDialog>("Broadcast to All Groups", parameters, options);
+            DialogService.ShowAsync<BroadcastDialog>("Broadcast to all groups", parameters, options);
         }
 
         private void OpenBroadcastSingleDialog(string id, string name)
         {
             var parameters = new DialogParameters { ["ToAllGroups"] = false, ["Id"] = id };
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-            DialogService.ShowAsync<BroadcastDialog>($"Broadcast to {name}", parameters, options);
+            DialogService.ShowAsync<BroadcastDialog>($"Send message to {name}", parameters, options);
         }
     }
 }

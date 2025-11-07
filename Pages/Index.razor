@@ -108,8 +108,11 @@
 						@if (u.Rank != "creator")
 						{
 							<MudMenu Size="Size.Small" Class="menu-ellipsis" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+								<MudMenuItem OnClick="() => OpenBroadcastSingleDialog(u.PhoneNumber, string.IsNullOrEmpty(u.Name) ? u.Name : u.PhoneNumber)">
+									<MudIcon Icon="@Icons.Material.Filled.Campaign" Class="mr-2" /> Send message to user
+								</MudMenuItem>
 								<MudMenuItem OnClick="() => ConfirmDeleteUser(u.PhoneNumber, g.Name)">
-									<MudIcon Icon="@Icons.Material.Filled.Delete" Class="mr-2" /> Delete User
+									<MudIcon Icon="@Icons.Material.Filled.Delete" Class="mr-2" /> Delete user
 								</MudMenuItem>
 							</MudMenu>
 						}
