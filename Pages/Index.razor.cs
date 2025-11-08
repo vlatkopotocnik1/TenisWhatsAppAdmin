@@ -67,13 +67,15 @@ namespace WhatsAppAdmin.Pages
                     }
 
                     // 2️⃣ Convert contacts to a dictionary for fast lookup
-                    var phoneToName = contacts
-                        .Where(c => !string.IsNullOrWhiteSpace(c.PhoneNumber))
-                        .ToDictionary(
-                            c => MainLayout.NormalizePhone(c.PhoneNumber),
-                            c => c.Name,
-                            StringComparer.OrdinalIgnoreCase
-                        );
+                    var phoneToName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var c in contacts.Where(c => !string.IsNullOrWhiteSpace(c.PhoneNumber)))
+                    {
+                        var key = MainLayout.NormalizePhone(c.PhoneNumber);
+
+                        // Add or update (last one wins if duplicates exist)
+                        phoneToName[key] = c.Name;
+                    }
 
                     // 3️⃣ Fetch groups from WhatsApp
                     var groupsFromWhatsApp = await WhapiService.GetAllGroupsAsync();
