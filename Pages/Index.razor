@@ -67,16 +67,16 @@
 						}
 
 						<MudMenu Size="Size.Small" Class="menu-ellipsis modern-menu" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
-							<MudMenuItem OnClick="() => ConfirmAddUser(g.Name)">
+							<MudMenuItem OnClick="() => OpenAddUserDialog(g.Name, g.IsNew)">
 								<MudIcon Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary" Class="mr-2" /> Add User
 							</MudMenuItem>
 							<MudMenuItem OnClick="() => OpenBroadcastDialog(g.Id, g.Name)">
-								<MudIcon Icon="@Icons.Material.Filled.Campaign" Color="Color.Info" Class="mr-2" /> Send Message
+								<MudIcon Icon="@Icons.Material.Filled.Campaign" Color="Color.Info" Class="mr-2" /> Send Message to Group
 							</MudMenuItem>
-							<MudMenuItem OnClick="() => ConfirmRenameGroup(g.Name)">
+							<MudMenuItem OnClick="() => OpenRenameGroupDialog(g.Id, g.Name, g.IsNew)">
 								<MudIcon Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" Class="mr-2" /> Rename Group
 							</MudMenuItem>
-							<MudMenuItem OnClick="() => ConfirmDeleteAllUsersFromGroup(g.Name)" Color="Color.Error">
+							<MudMenuItem OnClick="() => OpenDeleteGroupDialog(g.Id, g.Name, g.IsNew)" Color="Color.Error">
 								<MudIcon Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Error" Class="mr-2" /> Delete All Users
 							</MudMenuItem>
 						</MudMenu>
@@ -113,7 +113,7 @@
 									Send message to user
 								</MudMenuItem>
 
-								<MudMenuItem OnClick="() => ConfirmDeleteUser(u.PhoneNumber, g.Name)" Color="Color.Error">
+								<MudMenuItem OnClick="() => OpenDeleteUserDialog(u.PhoneNumber, g.Id, g.Name, g.IsNew)" Color="Color.Error">
 									<MudIcon Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Class="mr-2" />
 									Delete user
 								</MudMenuItem>
@@ -132,10 +132,3 @@
 		</div>
 	}
 </div>
-
-<PromptDialog Visible="@_modalVisible"
-			  VisibleChanged="@((bool v) => _modalVisible = v)"
-			  Title="@_modalTitle"
-			  BodyText="@_modalBodyText"
-			  Fields="@_modalFields"
-			  Buttons="@_modalButtons" />

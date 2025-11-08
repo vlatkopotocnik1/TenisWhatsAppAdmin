@@ -1,0 +1,73 @@
+﻿@using MudBlazor
+@using WhatsAppAdmin.Services
+@inject ISnackbar Snackbar
+@inject OverlayService OverlayService
+@inject WhapiService WhapiService
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+
+            <MudTextField @bind-Value="_phone"
+                          Label="Phone Number"
+                          FullWidth="true"
+                          Variant="Variant.Outlined"
+                          Immediate="true"
+                          Placeholder="Enter phone number" />
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudStack Row Justify="Justify.FlexEnd" Spacing="2">
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Primary" OnClick="AddUser">Add</MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string GroupName { get; set; } = string.Empty;
+    [Parameter] public bool IsLocal { get; set; } = false;
+
+    private string _phone = string.Empty;
+
+    private async Task AddUser()
+    {
+        if (string.IsNullOrWhiteSpace(_phone))
+        {
+            Snackbar.Add("Phone number cannot be empty", Severity.Warning);
+            return;
+        }
+
+        await OverlayService.RunAsync(async () =>
+        {
+            try
+            {
+                // If local only
+                if (IsLocal)
+                {
+                    Snackbar.Add($"✅ Added {_phone} to {GroupName} (local only)", Severity.Info);
+                    MudDialog.Close(DialogResult.Ok(_phone));
+                    return;
+                }
+
+                await WhapiService.AddUserToGroupAsync(GroupName, _phone);
+                Snackbar.Add($"✅ User {_phone} added to {GroupName}", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(_phone));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"❌ Failed to add user to group: {ex.Message}", Severity.Error, config =>
+                {
+                    config.RequireInteraction = true;
+                    config.ShowCloseIcon = true;
+                });
+            }
+        }, "Adding user...");
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

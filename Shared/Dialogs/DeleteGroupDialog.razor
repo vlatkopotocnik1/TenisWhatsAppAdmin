@@ -1,0 +1,81 @@
+﻿@using MudBlazor
+@using WhatsAppAdmin.Services
+@inject ISnackbar Snackbar
+@inject OverlayService OverlayService
+@inject WhapiService WhapiService
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.body1">
+                Are you sure you want to delete all users from
+                <MudText Color="Color.Primary" Typo="Typo.body1" Inline="true"><strong>@GroupName</strong></MudText>?
+            </MudText>
+            <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Outlined">
+                This action cannot be undone.
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudStack Row Justify="Justify.FlexEnd" Spacing="2">
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="DeleteUsers">Delete</MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string GroupName { get; set; } = string.Empty;
+    [Parameter] public string GroupId { get; set; } = string.Empty;
+    [Parameter] public bool IsLocal { get; set; } = false;
+
+    private async Task DeleteUsers()
+    {
+        if (string.IsNullOrWhiteSpace(GroupName))
+        {
+            Snackbar.Add("Invalid group name.", Severity.Warning);
+            return;
+        }
+
+        await OverlayService.RunAsync(async () =>
+        {
+            try
+            {
+                // Local-only delete
+                if (IsLocal)
+                {
+                    Snackbar.Add($"✅ Users from '{GroupName}' removed (local only)", Severity.Info);
+                    MudDialog.Close(DialogResult.Ok(true));
+                    return;
+                }
+
+                await WhapiService.SafeDeleteGroupAsync(GroupId);
+
+                Snackbar.Add($"✅ Users deleted from '{GroupName}'", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error, config =>
+                {
+                    config.RequireInteraction = true;
+                    config.ShowCloseIcon = true;
+                });
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"❌ Failed to delete users: {ex.Message}", Severity.Error, config =>
+                {
+                    config.RequireInteraction = true;
+                    config.ShowCloseIcon = true;
+                });
+            }
+        }, "Deleting users...");
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

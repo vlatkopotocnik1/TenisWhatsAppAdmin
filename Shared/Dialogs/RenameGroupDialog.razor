@@ -1,0 +1,93 @@
+﻿@using MudBlazor
+@using WhatsAppAdmin.Services
+@inject ISnackbar Snackbar
+@inject OverlayService OverlayService
+@inject WhapiService WhapiService
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+
+            <MudTextField @bind-Value="_oldName"
+                          Label="Current Name"
+                          Disabled="true"
+                          FullWidth="true"
+                          Variant="Variant.Outlined" />
+
+            <MudTextField @bind-Value="_newName"
+                          Label="New Name"
+                          FullWidth="true"
+                          Variant="Variant.Outlined"
+                          Immediate="true" />
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudStack Row Justify="Justify.FlexEnd" Spacing="2">
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Primary" OnClick="Rename">Rename</MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string OldName { get; set; } = string.Empty;
+    [Parameter] public string GroupId { get; set; } = string.Empty;
+    [Parameter] public bool IsLocal { get; set; } = false;
+
+    private string _oldName = string.Empty;
+    private string _newName = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _oldName = OldName;
+        _newName = OldName;
+    }
+
+    private async Task Rename()
+    {
+        if (string.IsNullOrWhiteSpace(_newName))
+        {
+            Snackbar.Add("New name cannot be empty", Severity.Warning);
+            return;
+        }
+
+        if (_newName == _oldName)
+        {
+            Snackbar.Add("Name has not changed", Severity.Info);
+            return;
+        }
+
+        await OverlayService.RunAsync(async () =>
+        {
+            try
+            {
+                // Local group only
+                if (IsLocal)
+                {
+                    Snackbar.Add($"✅ Group renamed to {_newName} (local only)", Severity.Info);
+                    MudDialog.Close(DialogResult.Ok(_newName));
+                    return;
+                }
+
+                // Rename through service
+                await WhapiService.UpdateGroupAsync(GroupId, _newName);
+                Snackbar.Add($"✅ Group renamed to {_newName}", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(_newName));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"❌ Failed to rename group: {ex.Message}", Severity.Error, config =>
+                {
+                    config.RequireInteraction = true;
+                    config.ShowCloseIcon = true;
+                });
+            }
+        }, "Renaming group...");
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

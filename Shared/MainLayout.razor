@@ -6,7 +6,7 @@
 
 <PageTitle>WhatsAppAdmin</PageTitle>
 
-<div class="page" @onclick="HandleGlobalClick" @oncontextmenu="HandleGlobalClick">
+<div class="page">
 	<div class="sidebar">
 		<NavMenu />
 	</div>
@@ -44,10 +44,6 @@
 		}
 
 		Navigation.NavigateTo("/login", forceLoad: true);
-	}
-	private void HandleGlobalClick()
-	{
-		GlobalEvents.RaiseHideContextMenu();
 	}
 	public static string NormalizePhone(string phoneNumber)
 	{

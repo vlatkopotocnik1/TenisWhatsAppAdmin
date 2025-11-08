@@ -1,0 +1,79 @@
+﻿@using MudBlazor
+@using WhatsAppAdmin.Services
+@inject ISnackbar Snackbar
+@inject OverlayService OverlayService
+@inject WhapiService WhapiService
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.body1">
+                Are you sure you want to delete
+                <MudText Color="Color.Primary" Inline="true"><strong>@PhoneNumber</strong></MudText>
+                from
+                <MudText Color="Color.Primary" Inline="true"><strong>@GroupName</strong></MudText>?
+            </MudText>
+            <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Outlined">
+                This action cannot be undone.
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudStack Row Justify="Justify.FlexEnd" Spacing="2">
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="DeleteUser">Delete</MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string PhoneNumber { get; set; } = string.Empty;
+    [Parameter] public string GroupName { get; set; } = string.Empty;
+    [Parameter] public string GroupId { get; set; } = string.Empty;
+    [Parameter] public bool IsLocal { get; set; } = false;
+
+    private async Task DeleteUser()
+    {
+        if (string.IsNullOrWhiteSpace(PhoneNumber))
+        {
+            Snackbar.Add("Invalid user number.", Severity.Warning);
+            return;
+        }
+
+        await OverlayService.RunAsync(async () =>
+        {
+            try
+            {
+                // Local only (group not yet created)
+                if (IsLocal)
+                {
+                    Snackbar.Add($"✅ User {PhoneNumber} removed (local only)", Severity.Info);
+                    MudDialog.Close(DialogResult.Ok(true));
+                    return;
+                }
+
+                await WhapiService.RemoveParticipantsAsync(GroupId, new[] { PhoneNumber });
+                Snackbar.Add($"✅ User {PhoneNumber} removed from {GroupName}", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"❌ Failed to delete user: {ex.Message}", Severity.Error, config =>
+                {
+                    config.RequireInteraction = true;
+                    config.ShowCloseIcon = true;
+                });
+            }
+        }, "Deleting user...");
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

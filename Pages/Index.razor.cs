@@ -4,6 +4,7 @@ using MudBlazor;
 using WhatsAppAdmin.Models;
 using WhatsAppAdmin.Services;
 using WhatsAppAdmin.Shared;
+using WhatsAppAdmin.Shared.Dialogs;
 
 namespace WhatsAppAdmin.Pages
 {
@@ -16,14 +17,6 @@ namespace WhatsAppAdmin.Pages
 
         private List<WhatsAppGroup> _whatsAppGroups = [];
 
-        // Modal system
-        private bool _modalVisible;
-        private string _modalTitle = "";
-        private string? _modalBodyText;
-        private List<PromptDialog.GenericField>? _modalFields;
-        private List<PromptDialog.GenericButton>? _modalButtons;
-        private record MenuPosition(double X, double Y);
-
         protected override async Task OnInitializedAsync()
         {
             ImportState.OnChange += OnImportStateChanged;
@@ -32,7 +25,6 @@ namespace WhatsAppAdmin.Pages
                 _whatsAppGroups = ConvertImportedToWhatsAppGroups(ImportState.Groups);
             }
             await RefreshGroupsFromWhatsAppAsync();
-            GlobalEvents.OnHideContextMenu += HideContextMenu;
         }
         private static List<WhatsAppGroup> ConvertImportedToWhatsAppGroups(IEnumerable<WhatsAppGroup> imported)
         {
@@ -71,7 +63,7 @@ namespace WhatsAppAdmin.Pages
                     if (File.Exists(contactsFile))
                     {
                         var json = await File.ReadAllTextAsync(contactsFile);
-                        contacts = System.Text.Json.JsonSerializer.Deserialize<List<User>>(json) ?? new();
+                        contacts = System.Text.Json.JsonSerializer.Deserialize<List<User>>(json) ?? [];
                     }
 
                     // 2️⃣ Convert contacts to a dictionary for fast lookup
@@ -87,19 +79,19 @@ namespace WhatsAppAdmin.Pages
                     var groupsFromWhatsApp = await WhapiService.GetAllGroupsAsync();
 
                     // 4️⃣ Convert and enrich with names from contacts.json
-                    _whatsAppGroups = ConvertWhatsAppApiGroups(groupsFromWhatsApp, isAfterDeleteAllUsers)
+                    _whatsAppGroups = [.. ConvertWhatsAppApiGroups(groupsFromWhatsApp, isAfterDeleteAllUsers)
                         .Select(g =>
                         {
-                            g.Users = g.Users.Select(u =>
+                            g.Users = [.. g.Users.Select(u =>
                             {
                                 var normalizedPhone = MainLayout.NormalizePhone(u.PhoneNumber);
                                 if (phoneToName.TryGetValue(normalizedPhone, out var mappedName))
                                     u.Name = mappedName; // replace name from contacts.json
 
                                 return u;
-                            }).ToList();
+                            })];
                             return g;
-                        }).ToList();
+                        })];
                 }
                 catch (Exception ex)
                 {
@@ -243,264 +235,10 @@ namespace WhatsAppAdmin.Pages
             return "unchanged";
         }
 
-        private void HideContextMenu()
-        {
-            InvokeAsync(StateHasChanged);
-        }
-
-        // 🔹 Generic modal helper
-        private void ShowModal(string title, string? body, List<PromptDialog.GenericField>? fields, List<PromptDialog.GenericButton> buttons)
-        {
-            _modalTitle = title;
-            _modalBodyText = body;
-            _modalFields = fields;
-            _modalButtons = buttons;
-            _modalVisible = true;
-        }
-
-        // 📝 Rename Group
-        private void ConfirmRenameGroup(string groupName)
-        {
-            ShowModal(
-                "Rename group",
-                null,
-                [new() { Name = "newName", Placeholder = "New group name", Value = groupName }],
-                [
-                    new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Rename", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async fields =>
-                        {
-                            var newName = fields?.FirstOrDefault(f => f.Name=="newName")?.Value;
-                            if (!string.IsNullOrWhiteSpace(newName))
-                                await RenameGroup(groupName, newName);
-                        })
-                    }
-                ]);
-        }
-
-        private async Task RenameGroup(string oldName, string newName)
-        {
-
-            await OverlayService.RunAsync(async () =>
-            {
-                var group = _whatsAppGroups.FirstOrDefault(g => g.Name == oldName);
-                if (group == null) return;
-
-                // If group is only local, just rename in memory
-                if (group.IsNew)
-                {
-                    group.Name = newName;
-                    Snackbar.Add($"✅ Group renamed to {newName} (local only)", Severity.Info);
-                    return;
-                }
-
-                try
-                {
-                    await WhapiService.UpdateGroupAsync(group.Id, newName);
-                }
-                catch(Exception ex)
-                {
-                    Snackbar.Add($"❌ Failed to rename group: {ex.Message}", Severity.Error, config =>
-                    {
-                        config.RequireInteraction = true;
-                        config.ShowCloseIcon = true;
-                    });
-                }
-                group.Name = newName;
-
-                Snackbar.Add($"✅ Group renamed to {newName}", Severity.Success);
-                await RefreshGroupsFromWhatsAppAsync();
-            }, $"Renaming");
-        }
-
-        // ➕ Add User
-        private void ConfirmAddUser(string groupName)
-        {
-            ShowModal(
-                "Add user",
-                null,
-                [new() { Name = "phone", Placeholder = "Phone" }],
-                [
-                    new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Add", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async fields =>
-                        {
-                            var phone = fields?.FirstOrDefault(f => f.Name=="phone")?.Value;
-                            if (!string.IsNullOrWhiteSpace(phone))
-                                await AddUserToGroup(groupName, phone);
-                        })
-                    }
-                ]);
-        }
-
-        private async Task AddUserToGroup(string groupName, string phone)
-        {
-            await OverlayService.RunAsync(async () =>
-            {
-                var group = _whatsAppGroups.FirstOrDefault(g => g.Name == groupName);
-                if (group == null) return;
-
-                var ifExistingUser = group.Users.FirstOrDefault(u => string.Equals(u.PhoneNumber, MainLayout.NormalizePhone(phone).Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
-
-                if (ifExistingUser != null)
-                {
-                    Snackbar.Add($"⚠️ User {phone} is already in {groupName}", Severity.Warning);
-                    return;
-                }
-
-                // Create user object
-                var newUser = new User
-                {
-                    PhoneNumber = phone
-                };
-
-                // If group is new (local only), just update the model
-                if (group.IsNew)
-                {
-                    group.Users.Add(newUser);
-                    Snackbar.Add($"✅ Added {phone} to {groupName} (local only)", Severity.Info);
-                    return;
-                }
-
-                try
-                {
-                    await WhapiService.AddUserToGroupAsync(groupName, phone);
-                }
-
-                catch(Exception ex)
-                {
-                    Snackbar.Add($"❌ Failed to add user to group: {ex.Message}", Severity.Error, config =>
-                    {
-                        config.RequireInteraction = true;
-                        config.ShowCloseIcon = true;
-                    });
-                }
-                Snackbar.Add($"✅ User {phone} added to {groupName}", Severity.Success);
-                await RefreshGroupsFromWhatsAppAsync();
-            }, "Adding user");
-        }
-
-        // 🗑️ Delete Group
-        private void ConfirmDeleteAllUsersFromGroup(string? groupName)
-        {
-            if (string.IsNullOrWhiteSpace(groupName)) return;
-            ShowModal(
-                "Delete all users from WhatsApp group",
-                $"Are you sure you want to delete all users from <strong>{groupName}</strong>?",
-                null,
-                [
-                    new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteAllUsersFromGroup(groupName)) }
-                ]);
-        }
-
-        private async Task DeleteAllUsersFromGroup(string groupName)
-        {
-            await OverlayService.RunAsync(async () =>
-            {
-                var group = _whatsAppGroups.FirstOrDefault(x => x.Name == groupName);
-                if (group == null) return;
-
-                if (group.IsNew)
-                {
-                    _whatsAppGroups.Remove(group);
-                    Snackbar.Add($"✅ Users from group '{groupName}' removed  (local only)", Severity.Info);
-                    return;
-                }
-
-                try
-                {
-                    await WhapiService.SafeDeleteGroupAsync(group.Id);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    Snackbar.Add(ex.Message, Severity.Error, config =>
-                    {
-                        config.RequireInteraction = true;
-                        config.ShowCloseIcon = true;
-                    });
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    Snackbar.Add($"❌ Failed to delete all users from group: {ex.Message}", Severity.Error, config =>
-                    {
-                        config.RequireInteraction = true;
-                        config.ShowCloseIcon = true;
-                    });
-                    return;
-                }
-                Snackbar.Add($"✅ Users deleted from '{groupName}'", Severity.Error);
-                await RefreshGroupsFromWhatsAppAsync(true);
-            }, $"Deleting users");
-        }
-
-        // 🗑️ Delete User
-        private void ConfirmDeleteUser(string phoneNumber, string groupName)
-        {
-            if (string.IsNullOrWhiteSpace(phoneNumber)) return;
-            ShowModal(
-                "Delete User",
-                $"Are you sure you want to delete <strong>{phoneNumber}</strong> from <strong>{groupName}</strong>?",
-                null,
-                [
-                    new() { Text = "Cancel", CssClass = "btn btn-secondary", CloseOnClick = true },
-                    new() { Text = "Delete", CssClass = "btn btn-danger", OnClick = EventCallback.Factory.Create<List<PromptDialog.GenericField>?>(this, async _ => await DeleteUser(phoneNumber)) }
-                ]);
-        }
-
-        private async Task DeleteUser(string phoneNumber)
-        {
-            await OverlayService.RunAsync(async () =>
-            {
-                var group = _whatsAppGroups.FirstOrDefault(g => g.Users.Any(u => u.PhoneNumber == phoneNumber));
-                if (group == null) return;
-
-                // Check if user is only in "ToAdd" (not yet on WhatsApp)
-                var userInToAdd = group.ToAdd.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
-                if (userInToAdd != null)
-                {
-                    group.ToAdd.Remove(userInToAdd);
-                    Snackbar.Add($"✅ User {phoneNumber} removed (local only)", Severity.Info);
-                    return;
-                }
-
-                var user = group.Users.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
-                if (user == null) return;
-
-                // If group not yet created on WhatsApp, just remove locally
-                if (group.IsNew)
-                {
-                    group.Users.Remove(user);
-                    Snackbar.Add($"✅ User {phoneNumber} removed (local only)", Severity.Info);
-                    return;
-                }
-
-                try
-                {
-                    await WhapiService.RemoveParticipantsAsync(group.Id, [user.PhoneNumber]);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    Snackbar.Add(ex.Message, Severity.Error);
-                    return;
-                }
-                catch(Exception ex)
-                {
-                    Snackbar.Add($"❌ Failed to delete user from group: {ex.Message}", Severity.Error, config =>
-                    {
-                        config.RequireInteraction = true;
-                        config.ShowCloseIcon = true;
-                    });
-                }
-                group.Users.Remove(user);
-                Snackbar.Add($"✅ User {phoneNumber} removed", Severity.Error);
-            }, "Deleting user");
-        }
-
         public void Dispose()
         {
             // Unsubscribe from events to prevent memory leaks
             ImportState.OnChange -= OnImportStateChanged;
-            GlobalEvents.OnHideContextMenu -= HideContextMenu;
 
             // Tell the GC there's no need to call a finalizer for this instance
             GC.SuppressFinalize(this);
@@ -638,6 +376,112 @@ namespace WhatsAppAdmin.Pages
             }
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
             DialogService.ShowAsync<BroadcastDialog>(title, parameters, options);
+        }
+
+        private async void OpenRenameGroupDialog(string id, string oldName, bool isLocal = false)
+        {
+            var parameters = new DialogParameters
+            {
+                ["GroupId"] = id,
+                ["OldName"] = oldName,
+                ["IsLocal"] = isLocal
+            };
+
+            var options = new DialogOptions
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true
+            };
+
+            var dialog = await DialogService.ShowAsync<RenameGroupDialog>("Rename Group", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled)
+            {
+                await RefreshGroupsFromWhatsAppAsync();
+                StateHasChanged();
+            }
+        }
+
+        private async Task OpenAddUserDialog(string groupName, bool isLocal = false)
+        {
+            var parameters = new DialogParameters
+            {
+                ["GroupName"] = groupName,
+                ["IsLocal"] = isLocal
+            };
+
+            var options = new DialogOptions
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true
+            };
+
+            var dialog = await DialogService.ShowAsync<AddUserDialog>($"Add User to {groupName}", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled)
+            {
+                await RefreshGroupsFromWhatsAppAsync();
+                StateHasChanged();
+            }
+        }
+
+        private async Task OpenDeleteGroupDialog(string groupId, string groupName, bool isLocal = false)
+        {
+            var parameters = new DialogParameters
+            {
+                ["GroupName"] = groupName,
+                ["GroupId"] = groupId,
+                ["IsLocal"] = isLocal
+            };
+
+            var options = new DialogOptions
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true
+            };
+
+            var dialog = await DialogService.ShowAsync<DeleteGroupDialog>("Delete All Users", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled)
+            {
+                // Refresh after deletion
+                await RefreshGroupsFromWhatsAppAsync(true);
+                StateHasChanged();
+            }
+        }
+
+        private async Task OpenDeleteUserDialog(string phoneNumber, string groupId, string groupName, bool isLocal = false)
+        {
+            var parameters = new DialogParameters
+            {
+                ["PhoneNumber"] = phoneNumber,
+                ["GroupName"] = groupName,
+                ["GroupId"] = groupId,
+                ["IsLocal"] = isLocal
+            };
+
+            var options = new DialogOptions
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true
+            };
+
+            var dialog = await DialogService.ShowAsync<DeleteUserDialog>("Delete User", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled)
+            {
+                // Refresh user list after deletion
+                await RefreshGroupsFromWhatsAppAsync();
+                StateHasChanged();
+            }
         }
     }
 }

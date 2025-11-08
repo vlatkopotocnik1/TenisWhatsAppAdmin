@@ -431,10 +431,6 @@
     background-color: transparent;
 }
 
-span {
-    cursor: default;
-}
-
 /* Keeps ellipsis visible when menu is open */
 .user-row.menu-active .menu-ellipsis,
 .whatsAppGroup-header.menu-active .menu-ellipsis {
