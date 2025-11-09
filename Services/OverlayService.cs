@@ -22,5 +22,17 @@
                 Hide();
             }
         }
+        public async Task<T> RunAsync<T>(Func<Task<T>> action, string message = "Loading...")
+        {
+            Show(message);
+            try
+            {
+                return await action();
+            }
+            finally
+            {
+                Hide();
+            }
+        }
     }
 }
