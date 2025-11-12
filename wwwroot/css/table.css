@@ -575,6 +575,44 @@
     opacity: 1 !important;
 }
 
+/* Keep ellipsis visible when menu button is focused or active (desktop) */
+@media (min-width: 769px) {
+    /* When menu button is focused, keep ellipsis visible */
+    .menu-ellipsis:focus,
+    .menu-ellipsis:focus-within,
+    .menu-ellipsis.mud-menu-activator:focus {
+        opacity: 1 !important;
+    }
+
+    /* When menu popover is visible, keep parent ellipsis visible */
+    .user-row:has(.menu-ellipsis .mud-popover[style*="display: block"]),
+    .user-row:has(.menu-ellipsis .mud-popover:not([style*="display: none"])),
+    .whatsAppGroup-header:has(.menu-ellipsis .mud-popover[style*="display: block"]),
+    .whatsAppGroup-header:has(.menu-ellipsis .mud-popover:not([style*="display: none"])) {
+        .menu-ellipsis {
+            opacity: 1 !important;
+        }
+    }
+
+    /* Alternative: Keep visible when MudMenu activator is active */
+    .menu-ellipsis.mud-menu-activator.mud-menu-activator-active .menu-ellipsis,
+    .menu-ellipsis.mud-menu-activator:active .menu-ellipsis {
+        opacity: 1 !important;
+    }
+
+    /* Keep ellipsis visible when clicking on it (active state) */
+    .menu-ellipsis:active,
+    .menu-ellipsis.mud-menu-activator:active {
+        opacity: 1 !important;
+    }
+
+    /* When menu is open, MudBlazor adds classes - detect and keep visible */
+    .user-row:has(.mud-menu-open) .menu-ellipsis,
+    .whatsAppGroup-header:has(.mud-menu-open) .menu-ellipsis {
+        opacity: 1 !important;
+    }
+}
+
 
 
 
