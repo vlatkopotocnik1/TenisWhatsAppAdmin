@@ -1,9 +1,10 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace WhatsAppAdmin.Services
 {
-    public class WhapiService
+    public partial class WhapiService
     {
         private readonly HttpClient _http;
         private readonly ILogger<WhapiService> _logger;
@@ -63,18 +64,18 @@ namespace WhatsAppAdmin.Services
             {
                 var count = root.GetArrayLength();
                 _logger.LogInformation("GetAllGroupsAsync - returned {Count} groups (array)", count);
-                return root.EnumerateArray().Select(x => x.Clone()).ToList();
+                return [.. root.EnumerateArray().Select(x => x.Clone())];
             }
 
             if (root.TryGetProperty("groups", out var groups) && groups.ValueKind == JsonValueKind.Array)
             {
                 var count = groups.GetArrayLength();
                 _logger.LogInformation("GetAllGroupsAsync - returned {Count} groups (groups property)", count);
-                return groups.EnumerateArray().Select(x => x.Clone()).ToList();
+                return [.. groups.EnumerateArray().Select(x => x.Clone())];
             }
 
             _logger.LogWarning("GetAllGroupsAsync - unexpected payload kind {Kind}", root.ValueKind);
-            return new List<JsonElement>();
+            return [];
         }
 
         public async Task<string> CreateGroupAsync(string name, IEnumerable<string> participants)
@@ -94,6 +95,9 @@ namespace WhatsAppAdmin.Services
 
             var json = await resp.Content.ReadAsStringAsync();
             _logger.LogDebug("CreateGroupAsync - response JSON length: {Len}", json?.Length ?? 0);
+
+            if (string.IsNullOrEmpty(json))
+                throw new InvalidOperationException("CreateGroupAsync - response JSON is null or empty.");
 
             var doc = JsonDocument.Parse(json);
             var id = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? string.Empty : string.Empty;
@@ -118,15 +122,80 @@ namespace WhatsAppAdmin.Services
 
         public async Task AddParticipantsAsync(string groupId, IEnumerable<string> participants)
         {
-            var masked = participants.Select(p => MaskPhone(p)).ToList();
+            var normalized = participants.Select(Normalize).ToList();
+            var masked = normalized.Select(MaskPhone).ToList();
+
             _logger.LogInformation("AddParticipantsAsync - group={GroupId} adding {Count} participants", groupId, masked.Count);
             _logger.LogDebug("AddParticipantsAsync - masked participants: {@Participants}", masked);
 
-            var payload = new { participants = participants.Select(Normalize).ToList() };
+            // 🧩 Fetch group details (so we can check existing members)
+            var groups = await GetAllGroupsAsync();
+            var group = groups.FirstOrDefault(g => g.TryGetProperty("id", out var idProp) && idProp.GetString() == groupId);
+
+            if (group.ValueKind == JsonValueKind.Undefined)
+                throw new InvalidOperationException($"Group with ID {groupId} not found.");
+
+            var validParticipants = new List<string>();
+
+            foreach (var phone in normalized)
+            {
+                // 1️⃣ Validate format
+                if (!PhoneRegex().IsMatch(phone))
+                {
+                    _logger.LogWarning("AddParticipantsAsync - invalid phone format: {Phone}", phone);
+                    await SendMessageToGroupAsync(groupId, $"⚠️ Invalid phone number format: {phone}");
+                    continue;
+                }
+
+                // 2️⃣ Check if already in group
+                if (group.TryGetProperty("participants", out var participantsProp))
+                {
+                    var existingParticipants = participantsProp.EnumerateArray()
+                        .Select(p =>
+                        {
+                            if (p.ValueKind == JsonValueKind.Object && p.TryGetProperty("id", out var idProp))
+                                return idProp.GetString();
+                            return null;
+                        })
+                        .Where(id => !string.IsNullOrWhiteSpace(id))
+                        .ToList();
+
+                    if (existingParticipants.Any(id => id!.Contains(phone)))
+                    {
+                        _logger.LogWarning("AddParticipantsAsync - user {Phone} already in group {GroupId}", phone, groupId);
+                        await SendMessageToGroupAsync(groupId, $"⚠️ The number {phone} is already in this group.");
+                        continue;
+                    }
+                }
+
+                // 3️⃣ Check if has WhatsApp
+                var hasWhatsApp = await CheckNumberHasWhatsAppAsync(phone);
+                if (!hasWhatsApp)
+                {
+                    _logger.LogWarning("AddParticipantsAsync - user {Phone} does not have WhatsApp", phone);
+                    await SendMessageToGroupAsync(groupId, $"⚠️ The number {phone} does not have WhatsApp and was skipped.");
+                    continue;
+                }
+
+                validParticipants.Add(phone);
+            }
+
+            // 🚫 No valid numbers found
+            if (validParticipants.Count == 0)
+            {
+                _logger.LogWarning("AddParticipantsAsync - no valid participants to add for group {GroupId}", groupId);
+                return;
+            }
+
+            // ✅ Add valid participants
+            var payload = new { participants = validParticipants };
             var resp = await _http.PostAsJsonAsync($"/groups/{groupId}/participants", payload, JsonOpts);
             await EnsureSuccess(resp);
 
-            _logger.LogInformation("AddParticipantsAsync - group={GroupId} added {Count} participants", groupId, masked.Count);
+            masked = [.. validParticipants.Select(MaskPhone)];
+
+            _logger.LogInformation("AddParticipantsAsync - group={GroupId} adding {Count} participants added", groupId, masked.Count);
+            _logger.LogDebug("AddParticipantsAsync - masked participants: {@Participants} added", masked);
         }
 
         public async Task RemoveParticipantsAsync(string groupId, IEnumerable<string> participants)
@@ -208,7 +277,10 @@ namespace WhatsAppAdmin.Services
                 throw new InvalidOperationException("There’s only the group creator left, and they can’t be removed.");
             }
 
-            participants.Remove(creator);
+            if (!string.IsNullOrEmpty(creator))
+            {
+                participants.Remove(creator);
+            }
 
             const int batch = 50;
             for (int i = 0; i < participants.Count; i += batch)
@@ -227,6 +299,8 @@ namespace WhatsAppAdmin.Services
             _logger.LogInformation("AddUserToGroupAsync - adding user to group '{GroupName}'", groupName);
             _logger.LogDebug("AddUserToGroupAsync - masked phone: {Phone}", MaskPhone(phone));
 
+
+            // 🔹 Get group by name
             var groups = await GetAllGroupsAsync();
             var group = groups.FirstOrDefault(g => g.TryGetProperty("name", out var n) && n.GetString() == groupName);
 
@@ -238,16 +312,42 @@ namespace WhatsAppAdmin.Services
 
             var groupId = group.GetProperty("id").GetString();
             if (string.IsNullOrWhiteSpace(groupId))
+                throw new InvalidOperationException($"Invalid group ID for {groupName}");
+            
+            await AddParticipantsAsync(groupId, [phone]);
+        }
+
+        private async Task<bool> CheckNumberHasWhatsAppAsync(string phone)
+        {
+            try
             {
-                _logger.LogWarning("AddUserToGroupAsync - invalid group id for '{GroupName}'", groupName);
-                throw new InvalidOperationException("Invalid group ID.");
+                var payload = new { blocking = "wait", contacts = new[] { phone } };
+                var resp = await _http.PostAsJsonAsync("/contacts", payload);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("CheckNumberHasWhatsAppAsync - API returned {Status}", resp.StatusCode);
+                    return false;
+                }
+
+                var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+                var contact = json.GetProperty("contacts").EnumerateArray().FirstOrDefault();
+
+                // "status": "valid" means user exists
+                if (contact.ValueKind != JsonValueKind.Undefined &&
+                    contact.TryGetProperty("status", out var status) &&
+                    status.GetString() == "valid")
+                {
+                    return true;
+                }
+
+                return false;
             }
-
-            var payload = new { participants = new[] { Normalize(phone) } };
-            var resp = await _http.PostAsJsonAsync($"/groups/{groupId}/participants", payload, JsonOpts);
-            await EnsureSuccess(resp);
-
-            _logger.LogInformation("AddUserToGroupAsync - added user to group '{GroupName}' (id={GroupId})", groupName, groupId);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to check WhatsApp existence for {Phone}", phone);
+                return false;
+            }
         }
 
         public async Task SendMessageToGroupAsync(string groupId, string message)
@@ -333,5 +433,8 @@ namespace WhatsAppAdmin.Services
 
             throw new HttpRequestException($"Request failed ({(int)resp.StatusCode} {resp.ReasonPhrase}): {text}");
         }
+
+        [GeneratedRegex(@"^\d{7,15}$", RegexOptions.Compiled)]
+        private static partial Regex PhoneRegex();
     }
 }

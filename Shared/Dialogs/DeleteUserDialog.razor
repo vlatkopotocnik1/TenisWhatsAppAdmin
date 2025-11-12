@@ -29,7 +29,7 @@
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance? MudDialog { get; set; }
 
     [Parameter] public string PhoneNumber { get; set; } = string.Empty;
     [Parameter] public string GroupName { get; set; } = string.Empty;
@@ -52,13 +52,13 @@
                 if (IsLocal)
                 {
                     Snackbar.Add($"✅ User {PhoneNumber} removed (local only)", Severity.Info);
-                    MudDialog.Close(DialogResult.Ok(true));
+                    MudDialog?.Close(DialogResult.Ok(true));
                     return;
                 }
 
                 await WhapiService.RemoveParticipantsAsync(GroupId, new[] { PhoneNumber });
                 Snackbar.Add($"✅ User {PhoneNumber} removed from {GroupName}", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(true));
+                MudDialog?.Close(DialogResult.Ok(true));
             }
             catch (InvalidOperationException ex)
             {
@@ -75,5 +75,5 @@
         }, "Deleting user...");
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => MudDialog?.Cancel();
 }

@@ -32,7 +32,7 @@
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance? MudDialog { get; set; }
 
     [Parameter] public string OldName { get; set; } = string.Empty;
     [Parameter] public string GroupId { get; set; } = string.Empty;
@@ -69,14 +69,14 @@
                 if (IsLocal)
                 {
                     Snackbar.Add($"✅ Group renamed to {_newName} (local only)", Severity.Info);
-                    MudDialog.Close(DialogResult.Ok(_newName));
+                    MudDialog?.Close(DialogResult.Ok(_newName));
                     return;
                 }
 
                 // Rename through service
                 await WhapiService.UpdateGroupAsync(GroupId, _newName);
                 Snackbar.Add($"✅ Group renamed to {_newName}", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(_newName));
+                MudDialog?.Close(DialogResult.Ok(_newName));
             }
             catch (Exception ex)
             {
@@ -89,5 +89,5 @@
         }, "Renaming group...");
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => MudDialog?.Cancel();
 }

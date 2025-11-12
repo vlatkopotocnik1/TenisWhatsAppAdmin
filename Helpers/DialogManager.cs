@@ -1,13 +1,12 @@
-﻿using MudBlazor;
+﻿using System.Text.RegularExpressions;
+using MudBlazor;
 using WhatsAppAdmin.Shared.Dialogs;
 
 namespace WhatsAppAdmin.Helpers
 {
-    public class DialogManager
+    public class DialogManager(IDialogService dialog)
     {
-        private readonly IDialogService _dialog;
-
-        public DialogManager(IDialogService dialog) => _dialog = dialog;
+        private readonly IDialogService _dialog = dialog;
 
         // Broadcast dialog
         public async Task OpenBroadcastDialogAsync(string? id = null, string? name = null, Func<Task>? onSuccess = null)
@@ -24,9 +23,9 @@ namespace WhatsAppAdmin.Helpers
 
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
             var dialog = await _dialog.ShowAsync<BroadcastDialog>(title, parameters, options);
-            var result = await dialog.Result;
+            var result = dialog.Result != null ? await dialog.Result : null;
 
-            if (!result.Canceled && onSuccess is not null)
+            if (result != null && !result.Canceled && onSuccess is not null)
                 await onSuccess.Invoke();
         }
 
@@ -41,9 +40,9 @@ namespace WhatsAppAdmin.Helpers
             };
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
             var dialog = await _dialog.ShowAsync<RenameGroupDialog>("Rename Group", parameters, options);
-            var result = await dialog.Result;
+            var result = dialog.Result != null ? await dialog.Result : null;
 
-            if (!result.Canceled && onSuccess is not null)
+            if (result != null && !result.Canceled && onSuccess is not null)
                 await onSuccess.Invoke();
         }
 
@@ -57,9 +56,9 @@ namespace WhatsAppAdmin.Helpers
             };
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
             var dialog = await _dialog.ShowAsync<AddUserDialog>($"Add User to {groupName}", parameters, options);
-            var result = await dialog.Result;
+            var result = dialog.Result != null ? await dialog.Result : null;
 
-            if (!result.Canceled && onSuccess is not null)
+            if (result != null && !result.Canceled && onSuccess is not null)
                 await onSuccess.Invoke();
         }
 
@@ -74,9 +73,9 @@ namespace WhatsAppAdmin.Helpers
             };
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
             var dialog = await _dialog.ShowAsync<DeleteGroupDialog>("Delete All Users", parameters, options);
-            var result = await dialog.Result;
+            var result = dialog.Result != null ? await dialog.Result : null;
 
-            if (!result.Canceled && onSuccess is not null)
+            if (result != null && !result.Canceled && onSuccess is not null)
                 await onSuccess.Invoke();
         }
 
@@ -92,9 +91,9 @@ namespace WhatsAppAdmin.Helpers
             };
             var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
             var dialog = await _dialog.ShowAsync<DeleteUserDialog>("Delete User", parameters, options);
-            var result = await dialog.Result;
+            var result = dialog.Result != null ? await dialog.Result : null;
 
-            if (!result.Canceled && onSuccess is not null)
+            if (result != null && !result.Canceled && onSuccess is not null)
                 await onSuccess.Invoke();
         }
     }

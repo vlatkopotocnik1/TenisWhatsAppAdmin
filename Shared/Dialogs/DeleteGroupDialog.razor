@@ -27,7 +27,7 @@
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance? MudDialog { get; set; }
 
     [Parameter] public string GroupName { get; set; } = string.Empty;
     [Parameter] public string GroupId { get; set; } = string.Empty;
@@ -49,14 +49,14 @@
                 if (IsLocal)
                 {
                     Snackbar.Add($"✅ Users from '{GroupName}' removed (local only)", Severity.Info);
-                    MudDialog.Close(DialogResult.Ok(true));
+                    MudDialog?.Close(DialogResult.Ok(true));
                     return;
                 }
 
                 await WhapiService.SafeDeleteGroupAsync(GroupId);
 
                 Snackbar.Add($"✅ Users deleted from '{GroupName}'", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(true));
+                MudDialog?.Close(DialogResult.Ok(true));
             }
             catch (InvalidOperationException ex)
             {
@@ -77,5 +77,5 @@
         }, "Deleting users...");
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => MudDialog?.Cancel();
 }

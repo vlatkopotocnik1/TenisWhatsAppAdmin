@@ -90,6 +90,10 @@ namespace WhatsAppAdmin.Pages
             });
         }
 
-        public void Dispose() => GroupSync.Dispose();
+        public void Dispose()
+        {
+            GroupSync.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 }

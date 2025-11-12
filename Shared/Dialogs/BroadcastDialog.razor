@@ -19,7 +19,8 @@
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance? MudDialog { get; set; }
+
     [Parameter] public string? Id { get; set; }
     [Parameter] public bool ToAllGroups { get; set; }
 
@@ -66,7 +67,7 @@
                         Snackbar.Add($"Failed to send to {Id}: {ex.Message}", Severity.Error);
                     }
                 }
-                MudDialog.Close(DialogResult.Ok(true));
+                MudDialog?.Close(DialogResult.Ok(true));
             }
             catch (Exception ex)
             {
@@ -79,5 +80,5 @@
         }, "Sending broadcast...");
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => MudDialog?.Cancel();
 }

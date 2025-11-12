@@ -27,7 +27,7 @@
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance? MudDialog { get; set; }
 
     [Parameter] public string GroupName { get; set; } = string.Empty;
     [Parameter] public bool IsLocal { get; set; } = false;
@@ -50,13 +50,13 @@
                 if (IsLocal)
                 {
                     Snackbar.Add($"✅ Added {_phone} to {GroupName} (local only)", Severity.Info);
-                    MudDialog.Close(DialogResult.Ok(_phone));
+                    MudDialog?.Close(DialogResult.Ok(_phone));
                     return;
                 }
 
                 await WhapiService.AddUserToGroupAsync(GroupName, _phone);
                 Snackbar.Add($"✅ User {_phone} added to {GroupName}", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(_phone));
+                MudDialog?.Close(DialogResult.Ok(_phone));
             }
             catch (Exception ex)
             {
@@ -69,5 +69,5 @@
         }, "Adding user...");
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => MudDialog?.Cancel();
 }
