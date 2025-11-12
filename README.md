@@ -49,6 +49,15 @@ dotnet run
 
 The app enforces authentication—open `/login` and sign in with the configured credentials (see **Security**).
 
+### Live reload while developing
+To auto-rebuild the server whenever you save a file, use the `dotnet watch` tooling via the helper script:
+```powershell
+# From the repository root
+.\watch.ps1              # Starts in Development mode (https://localhost:7232)
+.\watch.ps1 Production   # Starts in Production mode (https://localhost:7233)
+```
+The watch process rebuilds on file changes. After each rebuild, simply refresh your browser to see the latest changes—no manual restarts required.
+
 ## Configuration
 - **Whapi API key:** Stored under `Whapi:ApiKey` (default `appsettings.json`). Prefer user-secrets or environment variables in real deployments:
   ```bash

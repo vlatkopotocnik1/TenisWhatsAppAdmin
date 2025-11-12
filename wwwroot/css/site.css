@@ -66,7 +66,7 @@ a, .btn-link {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    width: 260px; /* or whatever your sidebar width is */
+    width: auto; /* or whatever your sidebar width is */
     background-color: #1e1e2f; /* match your dark theme */
     padding: 15px;
 }
