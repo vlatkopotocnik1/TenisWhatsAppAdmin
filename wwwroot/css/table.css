@@ -608,3 +608,47 @@
         transform: scale(1.2);
         transition: transform 0.15s ease;
     }
+
+/* Mobile-specific menu fixes */
+@media (max-width: 768px) {
+    /* Constrain menu width to viewport - prevent overflow */
+    .modern-menu .mud-popover-paper {
+        max-width: min(280px, calc(100vw - 32px)) !important;
+        min-width: 200px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+
+    /* Ensure popover container respects viewport */
+    .modern-menu .mud-popover {
+        max-width: calc(100vw - 16px);
+    }
+
+    /* Adjust menu positioning to prevent overflow - use viewport-relative positioning */
+    .user-row .modern-menu .mud-popover-paper {
+        max-width: min(260px, calc(100vw - 40px));
+    }
+
+    .whatsAppGroup-header .modern-menu .mud-popover-paper {
+        max-width: min(260px, calc(100vw - 40px));
+    }
+
+    /* Ensure menu items are touch-friendly on mobile */
+    .modern-menu .mud-menu-item {
+        min-height: 48px;
+        padding: 12px 16px;
+        font-size: 0.95rem;
+        margin: 4px 8px;
+    }
+
+    /* Better visual feedback for touch */
+    .modern-menu .mud-menu-item:active {
+        background-color: rgba(0, 0, 0, 0.1);
+        transform: scale(0.98);
+    }
+
+    /* Ensure menu has proper z-index on mobile */
+    .modern-menu .mud-popover {
+        z-index: 1300 !important;
+    }
+}

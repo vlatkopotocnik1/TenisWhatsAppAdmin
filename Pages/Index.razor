@@ -70,7 +70,7 @@
 							</MudChip>
 						}
 
-						<MudMenu Size="Size.Small" Class="menu-ellipsis modern-menu" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+						<MudMenu Size="Size.Small" Class="menu-ellipsis modern-menu" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
 							<MudMenuItem OnClick="() => OpenAddUserDialog(g.Name, g.IsNew)">
 								<MudIcon Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary" Class="mr-2" /> Add User
 							</MudMenuItem>
@@ -111,7 +111,7 @@
 						</div>
 						@if (u.Rank != "creator")
 						{
-							<MudMenu Size="Size.Small" Class="menu-ellipsis modern-menu" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+							<MudMenu Size="Size.Small" Class="menu-ellipsis modern-menu" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
 								<MudMenuItem OnClick="() => OpenBroadcastDialog(u.PhoneNumber, string.IsNullOrEmpty(u.Name) ? u.PhoneNumber : u.Name)">
 									<MudIcon Icon="@Icons.Material.Filled.Campaign" Color="Color.Info" Class="mr-2" />
 									Send message to user
