@@ -7,10 +7,14 @@
 @inject WhatsAppAdmin.Services.IService Service
 @inject ISnackbar Snackbar
 
-<MudStack Row="true" Spacing="2" Class="mb-3">
+<MudStack Row="true" Spacing="2" Class="toolbar-actions mb-3">
 
     <!-- Import from CSV -->
-    <MudButton Variant="Variant.Outlined" Color="Color.Success" HtmlTag="label" For="csvFileInput">
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Success"
+               HtmlTag="label"
+               For="csvFileInput"
+               Class="action-button">
         <MudIcon Icon="@Icons.Material.Filled.UploadFile" Class="mr-2" />
         Import from CSV file
     </MudButton>
@@ -18,7 +22,10 @@
     <InputFile id="csvFileInput" OnChange="OnCsvSelected" Style="display:none" />
 
     <!-- Import from Service -->
-    <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="ImportFromService">
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Success"
+               OnClick="ImportFromService"
+               Class="action-button action-button-primary">
         <MudIcon Icon="@Icons.Material.Filled.Sync" Class="mr-2" />
         Import from Service
     </MudButton>

@@ -8,11 +8,14 @@
 <PageTitle>Index</PageTitle>
 
 
-<MudPaper Class="d-flex align-center justify-space-between mb-3 p-2" Elevation="1">
+<MudPaper Class="actions-bar d-flex align-center justify-space-between mb-3 p-2" Elevation="1">
 
-	<MudMenu>
+	<MudMenu Class="actions-menu">
 		<ActivatorContent>
-			<MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Menu">
+			<MudButton Variant="Variant.Outlined"
+					   Color="Color.Primary"
+					   StartIcon="@Icons.Material.Filled.Menu"
+					   Class="action-button">
 				Admin Actions
 			</MudButton>
 		</ActivatorContent>
@@ -33,7 +36,8 @@
 	<MudButton Variant="Variant.Outlined"
 			   Color="Color.Secondary"
 			   StartIcon="@Icons.Material.Filled.Campaign"
-			   OnClick="() => OpenBroadcastDialog()">
+			   OnClick="() => OpenBroadcastDialog()"
+			   Class="action-button">
 		Broadcast
 	</MudButton>
 

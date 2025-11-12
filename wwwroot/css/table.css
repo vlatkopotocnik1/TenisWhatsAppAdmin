@@ -1,4 +1,20 @@
 ﻿/* --- WhatsApp Groups Board Layout --- */
+.actions-bar {
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.action-button {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.action-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 .whatsAppGroups-board {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -288,6 +304,83 @@
     }
 }
 
+@media (max-width: 992px) {
+    .actions-bar {
+        align-items: stretch;
+        justify-content: center;
+    }
+
+    .actions-bar > * {
+        flex: 1 1 100%;
+    }
+
+    .actions-menu {
+        width: 100%;
+    }
+
+    .toolbar-actions {
+        flex-direction: column !important;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .toolbar-actions .action-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .action-button {
+        width: 100%;
+        min-height: 48px;
+    }
+}
+
+@media (max-width: 768px) {
+    .actions-bar {
+        padding: 12px;
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .whatsAppGroups-board {
+        padding: 0 6px 16px;
+    }
+
+    .whatsAppGroup-column {
+        border-radius: 18px;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.15);
+        overflow: hidden;
+        border-width: 1px;
+    }
+
+    .whatsAppGroup-header {
+        border-radius: 18px 18px 0 0;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .whatsAppGroup-body {
+        padding: 12px;
+    }
+
+    .user-row {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 0;
+    }
+
+    .user-main {
+        padding-left: 0;
+    }
+
+    .menu-ellipsis {
+        opacity: 1;
+        margin-left: auto;
+    }
+}
+
 .app-modal input.form-control {
     width: 100%;
     box-sizing: border-box;
@@ -386,6 +479,12 @@
     width: 16px;
     height: 16px;
     color: #555;
+}
+
+@media (max-width: 768px) {
+    .menu-ellipsis {
+        opacity: 1 !important;
+    }
 }
 
 @keyframes fadeIn {
