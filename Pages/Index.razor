@@ -51,24 +51,16 @@
 				<div class="group-header-left">@g.Name</div>
 				<div class="group-header-right">
 					<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="0">
-						@if (g.IsNew)
-						{
-							<MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.NewReleases">
-								Will be created
-							</MudChip>
+						@{
+							var statusChip = g.IsNew
+								? (Color: Color.Info, Icon: Icons.Material.Filled.NewReleases, Text: "Will be created")
+								: (g.ToAdd.Any() || g.ToRemove.Any())
+									? (Color: Color.Warning, Icon: Icons.Material.Filled.Build, Text: "Has member changes")
+									: (Color: Color.Success, Icon: Icons.Material.Filled.CheckCircle, Text: "No changes");
 						}
-						else if (g.ToAdd.Any() || g.ToRemove.Any())
-						{
-							<MudChip T="string" Color="Color.Warning" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Build">
-								Has member changes
-							</MudChip>
-						}
-						else
-						{
-							<MudChip T="string" Color="Color.Success" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.CheckCircle">
-								No changes
-							</MudChip>
-						}
+						<MudChip T="string" Color="@statusChip.Color" Variant="Variant.Outlined" StartIcon="@statusChip.Icon">
+							@statusChip.Text
+						</MudChip>
 
 						<MudMenu Size="Size.Small" Class="menu-ellipsis modern-menu" Icon="@Icons.Material.Filled.MoreHoriz" Color="Color.Default" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
 							<MudMenuItem OnClick="() => OpenAddUserDialog(g.Name, g.IsNew)">
@@ -102,7 +94,7 @@
 							@u.Name @u.PhoneNumber
 							@if (u.Rank == "admin" || u.Rank == "creator")
 							{
-								<span> (@(string.IsNullOrEmpty(u.Rank) ? "" : char.ToUpper(u.Rank[0]) + u.Rank.Substring(1).ToLower())) </span>
+								<span> (@(!string.IsNullOrEmpty(u.Rank) ? char.ToUpper(u.Rank[0]) + u.Rank.Substring(1).ToLower() : "")) </span>
 							}
 							@if (isRemove)
 							{

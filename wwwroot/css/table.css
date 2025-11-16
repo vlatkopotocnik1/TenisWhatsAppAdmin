@@ -71,30 +71,7 @@
 }
 
 
-.delete-group-btn {
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: all 0.2s ease-in-out;
-    flex-shrink: 0;
-}
-
-    .delete-group-btn:hover {
-        background: #c82333;
-        transform: scale(1.1);
-    }
-
-    .delete-group-btn:active {
-        transform: scale(0.95);
-    }
+/* Removed unused .delete-group-btn styles */
 
 /* --- Header colors depending on status --- */
 
@@ -116,64 +93,13 @@
     color: #37474f;
 }
 
-/* --- Modern Status Badges --- */
-.group-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 9999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: none;
-    transition: all 0.25s ease-in-out;
-}
-
-/* 🆕 New Group */
-.group-status-new {
-    background: linear-gradient(90deg, #00c853, #4caf50);
-    color: #fff;
-    box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
-    animation: pulseGlow 2s infinite;
-}
-
-/* ⚙️ Changed Group */
-.group-status-changed {
-    background: linear-gradient(135deg, #f1c40f, #b7950b);
-    color: #fffbea;
-    box-shadow: 0 0 8px rgba(255, 235, 59, 0.4);
-}
-
-/* ✅ Unchanged Group */
-.group-status-unchanged {
-    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-    color: #f7f7f7;
-    opacity: 0.9;
-}
-
 /* --- Badge Hover --- */
 .whatsAppGroup-header:hover {
     transform: translateY(-1px);
     filter: brightness(1.1);
 }
 
-/* --- Glow Animation --- */
-@keyframes pulseGlow {
-    0%, 100% {
-        box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
-    }
-
-    50% {
-        box-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
-    }
-}
-
-/* --- Title --- */
-.group-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-}
+/* Removed unused status badge styles - using MudChip components instead */
 
 /* --- Grid Layout (Users) --- */
 .whatsAppGroup-grid {
@@ -281,35 +207,6 @@
 }
 
 /* --- Responsive --- */
-@media (max-width: 768px) {
-    .whatsAppGroups-board {
-        grid-template-columns: 1fr;
-        gap: 16px;
-        padding: 10px;
-    }
-
-    .whatsAppGroup-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-        font-size: 0.95rem;
-        padding: 8px;
-    }
-
-    .whatsAppGroup-grid {
-        font-size: 0.9rem;
-    }
-
-    .user-details {
-        position: static;
-        display: block;
-        margin-top: 6px;
-        box-shadow: none;
-        border: 1px solid rgba(0,0,0,0.04);
-        background: #fafafa;
-    }
-}
-
 @media (max-width: 992px) {
     .actions-bar {
         align-items: stretch;
@@ -343,6 +240,7 @@
 }
 
 @media (max-width: 768px) {
+    /* Actions bar mobile styles */
     .actions-bar {
         padding: 12px;
         background: #ffffff;
@@ -382,7 +280,10 @@
         order: 2;
     }
 
+    /* Groups board mobile styles */
     .whatsAppGroups-board {
+        grid-template-columns: 1fr;
+        gap: 16px;
         padding: 0 6px 16px;
     }
 
@@ -394,13 +295,20 @@
     }
 
     .whatsAppGroup-header {
-        border-radius: 18px 18px 0 0;
-        padding: 12px;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 12px;
+        font-size: 0.95rem;
+        padding: 12px;
+        border-radius: 18px 18px 0 0;
     }
 
     .whatsAppGroup-body {
         padding: 12px;
+    }
+
+    .whatsAppGroup-grid {
+        font-size: 0.9rem;
     }
 
     .user-row {
@@ -414,8 +322,17 @@
         padding-left: 0;
     }
 
+    .user-details {
+        position: static;
+        display: block;
+        margin-top: 6px;
+        box-shadow: none;
+        border: 1px solid rgba(0,0,0,0.04);
+        background: #fafafa;
+    }
+
     .menu-ellipsis {
-        opacity: 1;
+        opacity: 1 !important;
         margin-left: auto;
     }
 }
@@ -446,10 +363,6 @@
 
 
 
-
-
-
-
 .menu-ellipsis {
     opacity: 0;
     font-weight: bold;
@@ -470,18 +383,7 @@
     background-color: inherit !important;
 }
 
-.context-menu {
-    position: absolute;
-    background: #ffffff;
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    overflow: hidden;
-    z-index: 0;
-    min-width: 180px;
-    padding: 6px 0;
-    animation: fadeIn 0.15s ease;
-}
+/* Context menu styles moved to site.css to avoid duplication */
 
 .context-item {
     display: flex;
@@ -520,11 +422,7 @@
     color: #555;
 }
 
-@media (max-width: 768px) {
-    .menu-ellipsis {
-        opacity: 1 !important;
-    }
-}
+/* Menu ellipsis mobile visibility handled in main mobile media query above */
 
 @keyframes fadeIn {
     from {
@@ -546,6 +444,7 @@
     font-size: 0.95rem;
     color: #333;
 }
+
 .user-row.menu-active .menu-ellipsis {
     opacity: 1;
 }
@@ -577,36 +476,19 @@
 
 /* Keep ellipsis visible when menu button is focused or active (desktop) */
 @media (min-width: 769px) {
-    /* When menu button is focused, keep ellipsis visible */
     .menu-ellipsis:focus,
     .menu-ellipsis:focus-within,
-    .menu-ellipsis.mud-menu-activator:focus {
-        opacity: 1 !important;
-    }
-
-    /* When menu popover is visible, keep parent ellipsis visible */
-    .user-row:has(.menu-ellipsis .mud-popover[style*="display: block"]),
-    .user-row:has(.menu-ellipsis .mud-popover:not([style*="display: none"])),
-    .whatsAppGroup-header:has(.menu-ellipsis .mud-popover[style*="display: block"]),
-    .whatsAppGroup-header:has(.menu-ellipsis .mud-popover:not([style*="display: none"])) {
-        .menu-ellipsis {
-            opacity: 1 !important;
-        }
-    }
-
-    /* Alternative: Keep visible when MudMenu activator is active */
-    .menu-ellipsis.mud-menu-activator.mud-menu-activator-active .menu-ellipsis,
-    .menu-ellipsis.mud-menu-activator:active .menu-ellipsis {
-        opacity: 1 !important;
-    }
-
-    /* Keep ellipsis visible when clicking on it (active state) */
+    .menu-ellipsis.mud-menu-activator:focus,
     .menu-ellipsis:active,
     .menu-ellipsis.mud-menu-activator:active {
         opacity: 1 !important;
     }
 
-    /* When menu is open, MudBlazor adds classes - detect and keep visible */
+    /* When menu popover is visible, keep parent ellipsis visible */
+    .user-row:has(.menu-ellipsis .mud-popover[style*="display: block"]) .menu-ellipsis,
+    .user-row:has(.menu-ellipsis .mud-popover:not([style*="display: none"])) .menu-ellipsis,
+    .whatsAppGroup-header:has(.menu-ellipsis .mud-popover[style*="display: block"]) .menu-ellipsis,
+    .whatsAppGroup-header:has(.menu-ellipsis .mud-popover:not([style*="display: none"])) .menu-ellipsis,
     .user-row:has(.mud-menu-open) .menu-ellipsis,
     .whatsAppGroup-header:has(.mud-menu-open) .menu-ellipsis {
         opacity: 1 !important;
@@ -626,6 +508,9 @@
 }
 
 .modern-menu .mud-menu-item {
+    display: flex;
+    align-items: center;
+    font-weight: 500;
     border-radius: 8px;
     margin: 2px 8px;
     transition: background-color 0.2s ease, transform 0.1s ease;
@@ -635,12 +520,6 @@
         background-color: rgba(0, 0, 0, 0.05);
         transform: scale(1.02);
     }
-
-.modern-menu .mud-menu-item {
-    display: flex;
-    align-items: center;
-    font-weight: 500;
-}
 
     .modern-menu .mud-menu-item:hover .mud-icon-root {
         transform: scale(1.2);

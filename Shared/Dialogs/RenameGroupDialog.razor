@@ -3,6 +3,7 @@
 @inject ISnackbar Snackbar
 @inject OverlayService OverlayService
 @inject WhapiService WhapiService
+@inject NavigationManager Navigation
 
 <MudDialog>
     <DialogContent>
@@ -89,5 +90,9 @@
         }, "Renaming group...");
     }
 
-    private void Cancel() => MudDialog?.Cancel();
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+    }
 }

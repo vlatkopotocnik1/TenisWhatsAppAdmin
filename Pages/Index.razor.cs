@@ -44,50 +44,36 @@ namespace WhatsAppAdmin.Pages
         }
 
         // === Dialog openings with UI refresh callbacks ===
+        private async Task RefreshAfterDialog(Func<Task> dialogAction)
+        {
+            await dialogAction();
+            await RefreshGroupsFromWhatsAppAsync();
+            StateHasChanged();
+        }
 
         private async Task OpenBroadcastDialog(string? id = null, string? name = null)
         {
-            await Dialogs.OpenBroadcastDialogAsync(id, name, async () =>
-            {
-                await RefreshGroupsFromWhatsAppAsync();
-                StateHasChanged();
-            });
+            await RefreshAfterDialog(() => Dialogs.OpenBroadcastDialogAsync(id, name));
         }
 
         private async Task OpenRenameGroupDialog(string id, string oldName, bool isLocal = false)
         {
-            await Dialogs.OpenRenameGroupDialogAsync(id, oldName, isLocal, async () =>
-            {
-                await RefreshGroupsFromWhatsAppAsync();
-                StateHasChanged();
-            });
+            await RefreshAfterDialog(() => Dialogs.OpenRenameGroupDialogAsync(id, oldName, isLocal));
         }
 
         private async Task OpenAddUserDialog(string groupName, bool isLocal = false)
         {
-            await Dialogs.OpenAddUserDialogAsync(groupName, isLocal, async () =>
-            {
-                await RefreshGroupsFromWhatsAppAsync();
-                StateHasChanged();
-            });
+            await RefreshAfterDialog(() => Dialogs.OpenAddUserDialogAsync(groupName, isLocal));
         }
 
         private async Task OpenDeleteGroupDialog(string id, string name, bool isLocal = false)
         {
-            await Dialogs.OpenDeleteGroupDialogAsync(id, name, isLocal, async () =>
-            {
-                await RefreshGroupsFromWhatsAppAsync();
-                StateHasChanged();
-            });
+            await RefreshAfterDialog(() => Dialogs.OpenDeleteGroupDialogAsync(id, name, isLocal));
         }
 
         private async Task OpenDeleteUserDialog(string phone, string groupId, string groupName, bool isLocal = false)
         {
-            await Dialogs.OpenDeleteUserDialogAsync(phone, groupId, groupName, isLocal, async () =>
-            {
-                await RefreshGroupsFromWhatsAppAsync();
-                StateHasChanged();
-            });
+            await RefreshAfterDialog(() => Dialogs.OpenDeleteUserDialogAsync(phone, groupId, groupName, isLocal));
         }
 
         public void Dispose()
